@@ -12,18 +12,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify and publish signed APK
         env:
-          APK_URL: https://sdmntprcentralindia.oaiusercontent.com/files/00000000-dcc8-8208-ac12-247a71ba457b/raw?se=2026-10-26T16%3A18%3A21Z&sp=r&sv=2026-02-06&sr=b&scid=3311c60f-90ba-4aa3-a049-71d598adeeb2&skoid=f2622f62-3126-45cd-85e0-0bc840c3afdc&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-26T01%3A22%3A44Z&ske=2026-10-27T01%3A22%3A44Z&sks=b&skv=2026-02-06&sig=kW2QxdbSH0Y6N9M11VXfIUsxa81ktqXWk0rUWxFLIF0%3D
+          APK_URL: https://sdmntprcentralindia.oaiusercontent.com/files/00000000-33b8-8208-b146-892e18b2f9e3/raw?se=2026-10-26T16%3A56%3A56Z&sp=r&sv=2026-02-06&sr=b&scid=1645ce55-9e14-4a59-a6fd-47434161d4b7&skoid=f2622f62-3126-45cd-85e0-0bc840c3afdc&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-26T01%3A01%3A40Z&ske=2026-10-27T01%3A01%3A40Z&sks=b&skv=2026-02-06&sig=dqIYv%2BneQy%2BLoJgOoXnKFrXNWwTM2aC5qgYd%2Bbnc3g8%3D
         run: |
           mkdir -p apks
-          curl --fail -L "$APK_URL" -o apks/TG_stream_V4.8.apk
-          echo 'c1c7a3282a78636b9ce1914839fe31012bc76ffa5a4646adf8a936417ac9d10d  apks/TG_stream_V4.8.apk' | sha256sum -c -
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --min-sdk-version 25 --print-certs apks/TG_stream_V4.8.apk > /tmp/certificate.txt
+          curl --fail -L "$APK_URL" -o apks/TG_stream_V4.9.apk
+          echo 'ad9d7660031d7ef18ad2a7dbb6acaca8f9c296712fc4c7a225a03058db180467  apks/TG_stream_V4.9.apk' | sha256sum -c -
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --min-sdk-version 25 --print-certs apks/TG_stream_V4.9.apk > /tmp/certificate.txt
           grep -q '26e7b63fcdd306fe3f52a0172a3180160c0aee359a6c00f933ded41e8c0b8318' /tmp/certificate.txt
           cat > latest.json <<'JSON'
-          {"versionCode":49,"versionName":"4.8","url":"https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_V4.8.apk","sha256":"c1c7a3282a78636b9ce1914839fe31012bc76ffa5a4646adf8a936417ac9d10d","notes":"Smaller borderless player controls, circular outlines only around the small top icons. Muted rainbow accents and an independent cyan seek bar."}
+          {"versionCode":50,"versionName":"4.9","url":"https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_V4.9.apk","sha256":"ad9d7660031d7ef18ad2a7dbb6acaca8f9c296712fc4c7a225a03058db180467","notes":"TV remote navigation and clear focus highlights. Controls hide after five seconds and reveal on remote input. Side volume slider removed; larger movie title and time labels."}
           JSON
           git config user.name "TG stream releases"
           git config user.email "57000179+rinsanak@users.noreply.github.com"
-          git add apks/TG_stream_V4.8.apk latest.json
-          git commit -m "Publish signed TG stream 4.8 and update feed"
+          git add apks/TG_stream_V4.9.apk latest.json
+          git commit -m "Publish signed TG stream 4.9 and update feed"
           git push
