@@ -12,15 +12,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify and publish signed APK
         env:
-          APK_URL: 'https://sdmntprcentralindia.oaiusercontent.com/files/00000000-9b6c-8208-a71d-4d541a8c0dc2/raw?se=2026-10-26T14%3A24%3A21Z&sp=r&sv=2026-02-06&sr=b&scid=5ac82d83-2778-4054-a597-05bf30ad76db&skoid=f2622f62-3126-45cd-85e0-0bc840c3afdc&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-26T01%3A40%3A33Z&ske=2026-10-27T01%3A40%3A33Z&sks=b&skv=2026-02-06&sig=XmGqXkiPujz4r2TXwEsOb7YCHm8GetjDQc/YU/PYSWA%3D'
+          APK_URL: 'https://sdmntprcentralindia.oaiusercontent.com/files/00000000-b938-8208-97c2-13319ccfad08/raw?se=2026-10-26T14%3A29%3A52Z&sp=r&sv=2026-02-06&sr=b&scid=5ac82d83-2778-4054-a597-05bf30ad76db&skoid=f2622f62-3126-45cd-85e0-0bc840c3afdc&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-26T00%3A33%3A21Z&ske=2026-10-27T00%3A33%3A21Z&sks=b&skv=2026-02-06&sig=47ZBtYor2D2cDOIyXB6YTRHGa3D/0%2B1Pl1mxhEhnqnU%3D'
         run: |
           mkdir -p apks
           curl --fail -L "$APK_URL" -o apks/TG_stream_V4.4.apk
-          echo '95caacd5d688daf02a1f117be9c40d9f035e005db958df180de2a9382af68a90  apks/TG_stream_V4.4.apk' | sha256sum -c -
+          echo 'ae8d805278ec3150d0b87150c31e914fef162b0649ebb6fc9ad3e7784c8f0bb2  apks/TG_stream_V4.4.apk' | sha256sum -c -
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --min-sdk-version 25 --print-certs apks/TG_stream_V4.4.apk > /tmp/certificate.txt
           grep -q '26e7b63fcdd306fe3f52a0172a3180160c0aee359a6c00f933ded41e8c0b8318' /tmp/certificate.txt
           cat > latest.json <<'JSON'
-          {"versionCode":45,"versionName":"4.4","url":"https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_V4.4.apk","sha256":"95caacd5d688daf02a1f117be9c40d9f035e005db958df180de2a9382af68a90","notes":"In-app updates: Update now / Cancel, download progress and verified Android installation."}
+          {"versionCode":45,"versionName":"4.4","url":"https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_V4.4.apk","sha256":"ae8d805278ec3150d0b87150c31e914fef162b0649ebb6fc9ad3e7784c8f0bb2","notes":"In-app updates: Update now / Cancel, download progress and verified Android installation."}
           JSON
           git config user.name "TG stream releases"
           git config user.email "57000179+rinsanak@users.noreply.github.com"
