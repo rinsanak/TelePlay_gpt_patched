@@ -12,18 +12,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify and publish signed APK
         env:
-          APK_URL: https://sdmntprcentralindia.oaiusercontent.com/files/00000000-5fb8-8208-932a-532f261da9f4/raw?se=2026-10-26T17%3A09%3A29Z&sp=r&sv=2026-02-06&sr=b&scid=e510bdd4-69ad-45dc-8a4b-1c4de778d924&skoid=f2622f62-3126-45cd-85e0-0bc840c3afdc&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-26T16%3A55%3A16Z&ske=2026-10-27T16%3A55%3A16Z&sks=b&skv=2026-02-06&sig=nOKxuCgrgc%2BSplI6pwGTa2B5W5sjIvuVdfmdNLPNNiw%3D
+          APK_URL: https://sdmntprcentralindia.oaiusercontent.com/files/00000000-907c-8208-91be-45b8eeca1e23/raw?se=2026-10-27T14%3A40%3A42Z&sp=r&sv=2026-02-06&sr=b&scid=ecaf42cc-5077-45c3-a6e7-baeb7cd771c8&skoid=f2622f62-3126-45cd-85e0-0bc840c3afdc&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-27T11%3A47%3A18Z&ske=2026-10-28T11%3A47%3A18Z&sks=b&skv=2026-02-06&sig=mwplAqxgrBkP8/7htPgX8QEV2eO2dHBOK%2BRvExmQfsA%3D
         run: |
           mkdir -p apks
-          curl --fail -L "$APK_URL" -o apks/TG_stream_V4.10.apk
-          echo '7623ade2ab949ec224fa5849aef386514ac5529e17e99c2dc924e184f56158f7  apks/TG_stream_V4.10.apk' | sha256sum -c -
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --min-sdk-version 25 --print-certs apks/TG_stream_V4.10.apk > /tmp/certificate.txt
+          curl --fail -L "$APK_URL" -o apks/TG_stream_V4.11.apk
+          echo '6ca0deb60b3b897ea6f2de375c5162bddb3f97b645bf44a327d66127fb5d21ab  apks/TG_stream_V4.11.apk' | sha256sum -c -
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --min-sdk-version 25 --print-certs apks/TG_stream_V4.11.apk > /tmp/certificate.txt
           grep -q '26e7b63fcdd306fe3f52a0172a3180160c0aee359a6c00f933ded41e8c0b8318' /tmp/certificate.txt
           cat > latest.json <<'JSON'
-          {"versionCode":51,"versionName":"4.10","url":"https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_V4.10.apk","sha256":"7623ade2ab949ec224fa5849aef386514ac5529e17e99c2dc924e184f56158f7","notes":"TV installation settings fallbacks and Try installer option. Verified downloaded APK is kept and reused. Existing remote navigation and player UI retained."}
+          {"versionCode":52,"versionName":"4.11","url":"https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_V4.11.apk","sha256":"6ca0deb60b3b897ea6f2de375c5162bddb3f97b645bf44a327d66127fb5d21ab","notes":"Fixed early control hiding on tablets. One five-second inactivity timer; touch/remote release resets it, touch hold pauses hiding, and warm return restarts the timer."}
           JSON
           git config user.name "TG stream releases"
           git config user.email "57000179+rinsanak@users.noreply.github.com"
-          git add apks/TG_stream_V4.10.apk latest.json
-          git commit -m "Publish signed TG stream 4.10 and update feed"
+          git add apks/TG_stream_V4.11.apk latest.json
+          git commit -m "Publish signed TG stream 4.11 and update feed"
           git push
