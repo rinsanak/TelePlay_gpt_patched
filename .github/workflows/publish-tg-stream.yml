@@ -12,18 +12,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify and publish signed APK
         env:
-          APK_URL: https://sdmntpreastus2.oaiusercontent.com/files/00000000-c51c-81f6-83e6-e202d97c0bc5/raw?se=2026-10-29T17%3A36%3A33Z&sp=r&sv=2026-02-06&sr=b&scid=ed70a588-a9a9-4597-a9f5-b2e0a71a92d1&skoid=34268b52-5349-4f34-9be4-e38a5fb9f231&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-29T15%3A29%3A49Z&ske=2026-10-30T15%3A29%3A49Z&sks=b&skv=2026-02-06&sig=kcbz3EQ9Mvcj6Ndp9JKN0Cw1XHU3rb3BorFVdKHGblI%3D
+          APK_URL: https://sdmntprwestus3.oaiusercontent.com/files/00000000-18e4-81fd-b843-665e585c0918/raw?se=2026-10-29T17%3A54%3A25Z&sp=r&sv=2026-02-06&sr=b&scid=1e8391ec-9739-4d84-8fdf-76e8d329ec8d&skoid=34268b52-5349-4f34-9be4-e38a5fb9f231&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-29T15%3A21%3A52Z&ske=2026-10-30T15%3A21%3A52Z&sks=b&skv=2026-02-06&sig=ctq5JKpOEWlZ3lfzgMsT3AoRXdRwr4YSuhg9FSM87DQ%3D
         run: |
           mkdir -p apks
-          curl --fail -L "$APK_URL" -o apks/TG_stream_V5.3.apk
-          echo '579491555d6b3a5dc36e9fa0e7c3f29d0a9f30a49dad38d06c7e96dc80a30c0e  apks/TG_stream_V5.3.apk' | sha256sum -c -
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --min-sdk-version 25 --print-certs apks/TG_stream_V5.3.apk > /tmp/certificate.txt
+          curl --fail -L "$APK_URL" -o apks/TG_stream_V5.4.apk
+          echo '8020c814197bb3dee8ffefe52c51ca4b22fecd42f4f64e24d4fce6313497cc56  apks/TG_stream_V5.4.apk' | sha256sum -c -
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --min-sdk-version 25 --print-certs apks/TG_stream_V5.4.apk > /tmp/certificate.txt
           grep -q '26e7b63fcdd306fe3f52a0172a3180160c0aee359a6c00f933ded41e8c0b8318' /tmp/certificate.txt
           cat > latest.json <<'JSON'
-          {"versionCode":56,"versionName":"5.3","url":"https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_V5.3.apk","sha256":"579491555d6b3a5dc36e9fa0e7c3f29d0a9f30a49dad38d06c7e96dc80a30c0e","notes":"Full-screen promotional cover background, bottom poster rail and smooth selection transitions. Series covers with episode badges replace scene screenshots. Previous scene cache is ignored. No Home video preload."}
+          {"versionCode":57,"versionName":"5.4","url":"https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_V5.4.apk","sha256":"8020c814197bb3dee8ffefe52c51ca4b22fecd42f4f64e24d4fce6313497cc56","notes":"Glass Home with translucent panels, controls and bottom poster shelf. Selected artwork creates a full-width soft background, prepared once in the background. Smooth focus and cover transitions, with no Home video preload."}
           JSON
           git config user.name "TG stream releases"
           git config user.email "57000179+rinsanak@users.noreply.github.com"
-          git add apks/TG_stream_V5.3.apk latest.json
-          git commit -m "Publish signed TG stream 5.3 and update feed"
+          git add apks/TG_stream_V5.4.apk latest.json
+          git commit -m "Publish signed TG stream 5.4 and update feed"
           git push
