@@ -12,18 +12,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify and publish signed APK
         env:
-          APK_URL: https://sdmntprcentralindia.oaiusercontent.com/files/00000000-43d4-8208-a044-99f3f186eb0e/raw?se=2026-10-27T21%3A42%3A00Z&sp=r&sv=2026-02-06&sr=b&scid=a0c10829-0b1a-4d6f-8ad9-02671bcccf41&skoid=f2622f62-3126-45cd-85e0-0bc840c3afdc&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-27T12%3A05%3A14Z&ske=2026-10-28T12%3A05%3A14Z&sks=b&skv=2026-02-06&sig=AgMlmwfIZOdtHrDxfSdIXqQDHio22WePFpE/C5nrVTQ%3D
+          APK_URL: https://sdmntprpolandcentral.oaiusercontent.com/files/00000000-3914-820a-bdfe-cb10393356f4/raw?se=2026-10-29T16%3A20%3A40Z&sp=r&sv=2026-02-06&sr=b&scid=556d61ee-e0ab-4be5-b688-b1a22a50e95c&skoid=34268b52-5349-4f34-9be4-e38a5fb9f231&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-29T15%3A14%3A02Z&ske=2026-10-30T15%3A14%3A02Z&sks=b&skv=2026-02-06&sig=ETqiUSj7vmN3q6ux1qkiPbN/kM3o7lpw7G4aPcL7cE8%3D
         run: |
           mkdir -p apks
-          curl --fail -L "$APK_URL" -o apks/TG_stream_V5.0.apk
-          echo '00239fb9a3d97a02e72c99eeafe8ec5db18f244b0611e6b95e5ec556599c013f  apks/TG_stream_V5.0.apk' | sha256sum -c -
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --min-sdk-version 25 --print-certs apks/TG_stream_V5.0.apk > /tmp/certificate.txt
+          curl --fail -L "$APK_URL" -o apks/TG_stream_V5.1.apk
+          echo '99a720e7ded058b5825b0a2d0a3c4cf7df2bd39193fe1062847545b2748f717f  apks/TG_stream_V5.1.apk' | sha256sum -c -
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --min-sdk-version 25 --print-certs apks/TG_stream_V5.1.apk > /tmp/certificate.txt
           grep -q '26e7b63fcdd306fe3f52a0172a3180160c0aee359a6c00f933ded41e8c0b8318' /tmp/certificate.txt
           cat > latest.json <<'JSON'
-          {"versionCode":53,"versionName":"5.0","url":"https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_V5.0.apk","sha256":"00239fb9a3d97a02e72c99eeafe8ec5db18f244b0611e6b95e5ec556599c013f","notes":"Cinema Home with cached artwork or title fallback, Continue progress and remaining time. Side panels, focus labels, seek feedback and live subtitle preview."}
+          {"versionCode":54,"versionName":"5.1","url":"https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_V5.1.apk","sha256":"99a720e7ded058b5825b0a2d0a3c4cf7df2bd39193fe1062847545b2748f717f","notes":"Apple TV inspired Cinema Home with the latest ten Telegram videos, remote focus, card previews and separate Continue positions. Refresh keeps the selected movie."}
           JSON
           git config user.name "TG stream releases"
           git config user.email "57000179+rinsanak@users.noreply.github.com"
-          git add apks/TG_stream_V5.0.apk latest.json
-          git commit -m "Publish signed TG stream 5.0 and update feed"
+          git add apks/TG_stream_V5.1.apk latest.json
+          git commit -m "Publish signed TG stream 5.1 and update feed"
           git push
