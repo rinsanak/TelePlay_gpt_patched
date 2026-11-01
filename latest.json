@@ -1,1 +1,7 @@
-{"versionCode":59,"versionName":"5.6","url":"https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_V5.6.apk","sha256":"ebba6ef4081e98f5cf56d5e83f41bb345d7b51a0757c28f8c5f13448ab7d605a","notes":"Optimized non-debuggable Release build. Restored V5.1 preload continuity during Home/Player transitions. Android 12+ async decoding default restored with codec error fallback preserved. Glass UI and bulk audio processing retained."}
+{
+  "versionCode": 64,
+  "versionName": "6.0-beta5",
+  "url": "https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_6.0-beta5.apk",
+  "sha256": "b1a020af76c5e381e3e3e82da7399bc7217a539d488c61b8bb3396d0f420e73b",
+  "notes": "TMPlayer-style charcoal and blue Home, account-wide video/document search including archived chats, paginated chat poster grids, Continue watching and series/season/episode browsing. Phone touch and TV remote layouts with Android target 35. Uses the original V5.6 signing identity; update without uninstall. Existing subtitles retained. No Cast."
+}
