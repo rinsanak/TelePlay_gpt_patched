@@ -1,11 +1,23 @@
-# 6.0-beta3 status
+# TG stream 6.0-beta4 / versionCode 63
 
-151 tests: 147 passed, 4 ARM-native checks skipped, 0 failed. Release lint, R8, resource shrinking and signed APK assembly passed. The signed APK certificate is pinned in the publisher. Existing subtitle/player implementations remain unchanged. Physical TV/account login/streaming were not tested.
+## Changes
 
-Home now groups shows by normalized name/year. A show opens season selection; a season opens ordered episodes. The player receives the show's loaded episode queue. Back navigation returns to seasons and Home. Episode long press retains individual actions. The lists cover the existing bounded recent-history window and remembered episodes; this is not a full-channel scan or a promise that unloaded seasons will appear.
+- Public application label and library brand: TG stream. Application ID and persistent signing identity are unchanged from beta3.
+- Main library supports phone portrait touch use with scrollable content, 48dp navigation/filter controls and larger posters. TV/large landscape uses the existing remote layout. Rotation rebuilds the relevant library/season/episode screen. Playback remains fullscreen landscape, with existing touch-capable Media3 controls.
+- Target SDK raised from 28 to 35 to address the legacy-target Android warning shown in the user's screenshot. Bluetooth broadcasts are registered with modern flags, and Bluetooth-specific events are only subscribed to when permission permits. Audio-becoming-noisy handling remains available without Bluetooth permission.
+- Check for update is accessible from the unconfigured-login screen as well as Settings. The release publisher now uses TG_stream APK/source filenames and the existing pinned repository feed.
+- LOST-style show/season/episode browsing remains; subtitles and Cast exclusions remain. The loaded recent-history window is still bounded.
 
-The TV API ID/hash input form is gone. The build reads TG_API_ID/TG_API_HASH from publisher environment; legacy configured installs preserve their stored values. A build without those values displays Sign in unavailable rather than an API form. No real publisher Telegram credentials were available, so the current signed APK is diagnostic only and must not be published as login-ready. The publisher rejects this missing prerequisite.
+## What is not yet ready
 
-No old keystore was found in supplied files/repository history. GitHub Actions secret inventory could not be inspected because api.github.com is blocked by the environment network policy. The user authorized a replacement: it was generated securely outside the repository and is NOT yet persisted in GitHub Secrets. Its public certificate SHA256 is 70db42e5a1ee6f2fe4e9b5b63ac6a90360e89466d9a1bb1ee5147a57d0316460. This identity needs one reinstall from V5.6; future releases must reuse it.
+The Telegram publisher API ID/hash were not provided in this environment. They are required internally even though the user only sees phone/QR login. No working authenticated login or actual streaming has been validated. Unconfigured builds must not be published as functional updates. The screenshot's Sign in unavailable state cannot be fixed merely by renaming the app or raising target SDK.
 
-The environment draft now requests api.github.com access and Telegram variable names. Apply the network change in environment settings; then use tools/configure-release-secrets.py to persist the existing key securely, check existing Telegram Actions bindings, supply missing publisher credentials securely, run the workflow and verify latest.json. Source Git push works; API access and a successful signed feed publication are separate. Historical verification documents refer to older revisions.
+GitHub API access remains denied by the environment's HTTP policy. Source Git pushes work, but Actions signing secrets cannot currently be inspected or saved. The saved environment draft requests api.github.com access; apply that change, then securely persist the existing key with tools/configure-release-secrets.py and inspect/supply the Telegram Actions secrets. Only a successful configured release workflow may change the live updater feed.
+
+The current native libraries are ARMv7 only. ARM64-only phones are not supported by this binary. Host tests do not establish physical TV/phone playback, QR authentication, sound or HDMI behavior. No fresh diagnostic APK is being offered as a replacement for the working release. See UI_REVISION_VERIFICATION.json for current host validation.
+
+## Current host verification
+
+155 tests executed: 151 passed, 4 ARM-native tests skipped, 0 failed/errors. Release lint and signed release build passed. Android 15/API35 tests verify the TG stream label, target SDK 35, portrait touch controls, updater access without login, and receiver registration without Bluetooth permission. Native-rendered phone, standard TV and compact TV layout checks passed. A local temporary-checkout publisher integration check verified TG_stream APK/source filenames and manifest staging; it did not publish a remote update.
+
+Final release lint reported 0 errors and 80 warnings. Optional Bluetooth hardware was declared explicitly so it is not an installation prerequisite. Final signed APK assembly succeeded after that manifest adjustment. The diagnostic binary was not published as a working login update.

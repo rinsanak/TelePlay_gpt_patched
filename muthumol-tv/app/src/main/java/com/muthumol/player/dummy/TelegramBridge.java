@@ -222,7 +222,7 @@ class TelegramBridge {
           "systemLanguageCode",
           "en",
           "deviceModel",
-          "Muthumol TV",
+          "TG stream",
           "systemVersion",
           Build.VERSION.RELEASE,
           "applicationVersion",

@@ -1,4 +1,4 @@
-# Muthumol TV release requirements
+# TG stream release requirements
 
 The user wants every app update available both as an APK and through the installed app's Check for update.
 
@@ -13,3 +13,5 @@ The user wants every app update available both as an APK and through the install
 
 - End-user login must only use phone/QR (plus Telegram-requested verification). TG_API_ID and TG_API_HASH belong to build configuration, not a TV input form. Never invent or borrow Telegram API credentials. Do not publish a build whose login is unconfigured.
 - Home groups shows such as LOST into one card. Opening a show selects a season, then an episode; preserve this hierarchy in future updates.
+
+- Public app name is TG stream. Support phone touch and portrait browsing as well as TV remote/landscape use. Keep the existing applicationId and persistent certificate to preserve installed-update compatibility. Target SDK is now 35; guard modern Android permission/receiver behavior while retaining minSdk 25.

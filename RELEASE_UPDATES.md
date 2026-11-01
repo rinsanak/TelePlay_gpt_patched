@@ -1,6 +1,6 @@
 # Recurring Muthumol TV releases
 
-Source: `muthumol-tv/` on main. APK/source/manifest destination: existing `tg-stream-updates` branch. Current candidate: 62 / 6.0-beta3.
+Source: `muthumol-tv/` on main. APK/source/manifest destination: existing `tg-stream-updates` branch. Current candidate: TG stream 63 / 6.0-beta4.
 
 ## Signing migration authorized by the user
 

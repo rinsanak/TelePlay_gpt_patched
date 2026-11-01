@@ -47,11 +47,11 @@ def stage(destination):
     if any(i.get('severity') in ('Error', 'Fatal') for i in lint.findall('issue')):
         raise ValueError('Release lint failed')
     destination.mkdir(parents=True, exist_ok=True)
-    name = f'Muthumol_TV_{version}.apk'
+    name = f'TG_stream_{version}.apk'
     shutil.copy2(apk, destination / name)
     manifest = dict(versionCode=code, versionName=version, url=BASE + 'apks/' + name,
                     sha256=hashlib.sha256(apk.read_bytes()).hexdigest(),
-                    notes='LOST-style series/season/episode browsing and phone/QR login. Signing identity changes from V5.6: uninstall old app once, install this version, then future updates use this key. Existing subtitles retained. No Cast.')
+                    notes='TG stream phone touch and TV remote layouts, Android target 35 compatibility, LOST-style series/season/episode browsing and phone/QR login. Signing identity changes from V5.6: uninstall old app once, install this version, then future updates use this key. Existing subtitles retained. No Cast.')
     (destination / 'latest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     print(f'Verified signed {version} ({code}); staged APK and manifest')
 
@@ -62,7 +62,7 @@ def publish(staged):
     if manifest['versionCode'] <= previous['versionCode']:
         raise ValueError('Version code must increase; refusing a stale update or downgrade')
     name = manifest['url'].removeprefix(BASE + 'apks/')
-    if '/' in name or not re.fullmatch(r'Muthumol_TV_[A-Za-z0-9._-]+\.apk', name):
+    if '/' in name or not re.fullmatch(r'TG_stream_[A-Za-z0-9._-]+\.apk', name):
         raise ValueError('Invalid pinned updater URL')
     apk = staged / name
     if hashlib.sha256(apk.read_bytes()).hexdigest() != manifest['sha256']:
@@ -74,7 +74,7 @@ def publish(staged):
     Path('apks').mkdir(exist_ok=True)
     Path('sources').mkdir(exist_ok=True)
     shutil.copy2(apk, Path('apks') / name)
-    shutil.copy2(staged / 'source.zip', Path('sources') / f"Muthumol_TV_{manifest['versionName']}_Source.zip")
+    shutil.copy2(staged / 'source.zip', Path('sources') / f"TG_stream_{manifest['versionName']}_Source.zip")
     shutil.copy2(staged / 'latest.json', 'latest.json')
     print('Feed checkout staged; commit APK, source and manifest in one push')
 
