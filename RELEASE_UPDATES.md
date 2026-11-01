@@ -1,6 +1,6 @@
 # Recurring Muthumol TV releases
 
-Source: `muthumol-tv/` on main. APK/source/manifest destination: existing `tg-stream-updates` branch. Current candidate: TG stream 63 / 6.0-beta4.
+Source: `muthumol-tv/` on main. APK/source/manifest destination: existing `tg-stream-updates` branch. Current candidate: TG stream 64 / 6.0-beta5.
 
 ## Signing migration authorized by the user
 
@@ -21,3 +21,6 @@ Increase versionCode and versionName, push source to main, and verify the workfl
 GitHub API access to `api.github.com` was requested in the environment draft. The draft must be applied before this agent can inspect or save Actions secrets. Source Git push access works independently. Once secure prerequisites are supplied, rerun the workflow and verify the live manifest; source publication alone is not an APK release.
 
 After API access is enabled, the agent can securely upload the already generated signing material using `python muthumol-tv/tools/configure-release-secrets.py /workspace/private-signing`. This helper sends values over stdin to gh secret set; it does not print or commit them. Existing Telegram secret bindings are preserved unless actual TG_API_ID/TG_API_HASH are supplied in the process.
+
+
+Beta5 fixes the unavailable SDK `tools` package by explicitly requesting `platform-tools` and pinning the runner to Ubuntu 24.04. Validation now runs before signing-secret checks; successful unsigned validation is not a published update.

@@ -51,7 +51,7 @@ def stage(destination):
     shutil.copy2(apk, destination / name)
     manifest = dict(versionCode=code, versionName=version, url=BASE + 'apks/' + name,
                     sha256=hashlib.sha256(apk.read_bytes()).hexdigest(),
-                    notes='TG stream phone touch and TV remote layouts, Android target 35 compatibility, LOST-style series/season/episode browsing and phone/QR login. Signing identity changes from V5.6: uninstall old app once, install this version, then future updates use this key. Existing subtitles retained. No Cast.')
+                    notes='TMPlayer-style charcoal and blue Home, account-wide video/document search including archived chats, paginated chat poster grids, Continue watching and series/season/episode browsing. Phone touch and TV remote layouts with Android target 35. Signing identity changes from V5.6: uninstall old app once, install this version, then future updates use this key. Existing subtitles retained. No Cast.')
     (destination / 'latest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     print(f'Verified signed {version} ({code}); staged APK and manifest')
 
@@ -83,3 +83,4 @@ if __name__ == '__main__':
     if len(sys.argv) != 3 or sys.argv[1] not in ('stage', 'publish'):
         raise SystemExit('Usage: publish-update.py stage|publish STAGING_DIRECTORY')
     globals()[sys.argv[1]](Path(sys.argv[2]).resolve())
+

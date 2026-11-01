@@ -11,7 +11,7 @@ final class Ui {
   static final int ACCENT=0xff63e6d1;
   static final int[] MENU_COLORS={0xffb65353,0xffb7793d,0xffaa9143,0xff4d8b65,0xff477fa8,0xff5f639c,0xff88649b};
   static int nextColorIndex=(int)(android.os.SystemClock.elapsedRealtime()%MENU_COLORS.length);
-  static synchronized int nextMenuColor(Context c) { int color=MENU_COLORS[nextColorIndex];nextColorIndex=(nextColorIndex+1)%MENU_COLORS.length;return color; }
+  static synchronized int nextMenuColor(Context c) { if(c instanceof MainActivity)return TmStyle.ACCENT;int color=MENU_COLORS[nextColorIndex];nextColorIndex=(nextColorIndex+1)%MENU_COLORS.length;return color; }
   static int color(Context c) {
     if(c instanceof MainActivity)return ((MainActivity)c).uiColor;
     if(c instanceof PlayerActivity)return ((PlayerActivity)c).uiColor;
@@ -34,7 +34,7 @@ final class Ui {
   static void menu(Activity a,String title,String[] labels,java.util.function.IntConsumer pick) {
     int color=nextMenuColor(a);Dialog d=new Dialog(a);d.requestWindowFeature(Window.FEATURE_NO_TITLE);
     LinearLayout body=new LinearLayout(a);body.setOrientation(LinearLayout.VERTICAL);
-    body.setPadding(dp(a,18),dp(a,14),dp(a,18),dp(a,12));body.setBackground(a instanceof MainActivity?new GlassSurface(a,24,false,false):glass(color,false));
+    body.setPadding(dp(a,18),dp(a,14),dp(a,18),dp(a,12));body.setBackground(a instanceof MainActivity?TmStyle.pill(a,false,false):glass(color,false));
     TextView heading=text(a,title,23,Color.WHITE);body.addView(heading);
     ScrollView scroll=new ScrollView(a);LinearLayout rows=new LinearLayout(a);rows.setOrientation(LinearLayout.VERTICAL);scroll.addView(rows);
     int selectedIndex=0;for(int n=0;n<labels.length;n++)if(labels[n].contains("✓")){selectedIndex=n;break;}
@@ -62,7 +62,7 @@ final class Ui {
     return new AlertDialog.Builder(a) {
       @Override public AlertDialog show() {
         AlertDialog d=super.show();int color=nextMenuColor(a);Window w=d.getWindow();
-        if(w!=null) {w.setBackgroundDrawable(a instanceof MainActivity?new GlassSurface(a,24,false,false):glass(color,false));w.setDimAmount(.10f);}
+        if(w!=null) {w.setBackgroundDrawable(a instanceof MainActivity?TmStyle.pill(a,false,false):glass(color,false));w.setDimAmount(.10f);}
         for(int which:new int[]{AlertDialog.BUTTON_POSITIVE,AlertDialog.BUTTON_NEGATIVE,AlertDialog.BUTTON_NEUTRAL}) {
           Button b=d.getButton(which);if(b!=null) {b.setTextColor(color);b.setBackgroundColor(Color.TRANSPARENT);b.setOnFocusChangeListener((v,f)->{v.setBackground(f?glass(color,true):null);((TextView)v).setTextColor(f?0xff101820:color);});}
         }

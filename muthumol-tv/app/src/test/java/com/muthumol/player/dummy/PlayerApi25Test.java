@@ -217,7 +217,7 @@ public class PlayerApi25Test {
   @Test public void homeOpensDirectlyAndKeepsCinemaPaletteWithoutRebuildingViews() {
     ActivityController<MainActivity> hc=Robolectric.buildActivity(MainActivity.class).create();MainActivity h=hc.get();
     assertEquals("home",h.screen);assertNotNull(h.title);android.view.View existing=h.title;int old=h.uiColor;
-    h.refreshHomeColors();assertEquals(Ui.ACCENT,old);assertEquals(old,h.uiColor);assertSame(existing,h.title);hc.destroy();
+    h.refreshHomeColors();assertEquals(TmStyle.ACCENT,old);assertEquals(old,h.uiColor);assertSame(existing,h.title);hc.destroy();
   }
   @Test public void compactControlsShareTimeRowAboveBottomSeekBar() {
     controller.start().resume().visible();
@@ -376,7 +376,7 @@ public class PlayerApi25Test {
     ActivityController<MainActivity> homeController=Robolectric.buildActivity(MainActivity.class).create();
     MainActivity home=homeController.get();home.openHome();
     assertTrue(home.playFromStartButton.isFocusable());assertTrue(home.playFromStartButton.getLayoutParams().height>=Ui.dp(home,34));
-    assertEquals(Ui.ACCENT,home.uiColor);
+    assertEquals(TmStyle.ACCENT,home.uiColor);
     assertEquals("Search library",home.homeActions[2].getContentDescription().toString());
     assertEquals(home.homeActions[2].getId(),home.continueButton.getNextFocusRightId());
     for(int i=0;i<activity.top.getChildCount();i++){android.view.View v=activity.top.getChildAt(i);if(v instanceof android.widget.TextView)assertNotEquals("BT",((android.widget.TextView)v).getText().toString());}
@@ -435,3 +435,4 @@ public class PlayerApi25Test {
   }finally{session.ui.removeCallbacks(session.pauseTask);session.ui.removeCallbacks(session.poll);session.visibleOwners.clear();session.visibleOwners.addAll(owners);session.movie=previous;session.tg.ready=ready;}
  }
 }
+

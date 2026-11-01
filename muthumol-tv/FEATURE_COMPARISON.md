@@ -5,7 +5,11 @@ Compared on 2026-11-01 with TMPlayer commit
 This is a source comparison, not a claim that every reference feature was device-tested.
 The historical conversation previews were available; a tool to open their full threads was not.
 
-## This revision
+## Current beta5 additions
+
+See CURRENT_RELEASE_STATUS.md and CHANGELOG_V6.0_beta5.md. Beta5 adds account-wide video/document search with archive inclusion, paginated chats and poster grids, multiple Home shelves and the reference dark colour roles. The comparison below records the earlier beta2 revision and is historical. Full TMPlayer parity is not claimed.
+
+## Earlier beta2 revision
 
 - Home navigation now labels Search, Collections, Downloads and Settings.
 - All, Continue, Movies, Series, Watch later and Favourites are directly accessible on Home.
@@ -62,3 +66,4 @@ A source ZIP or a file in a chat does not publish an updater release. No update 
 5. Treat split-file playback, resume sync, real chapter parsing and 3D rendering as separate player changes, with device validation.
 
 The current changes improve Home and local discovery. Physical TV remote feel, projector contrast, actual streaming, audio quality and native decoder behavior still require the user's compatible TV/account.
+

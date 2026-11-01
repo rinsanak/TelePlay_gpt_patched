@@ -1,0 +1,37 @@
+{
+  "version": "6.0-beta5",
+  "versionCode": 64,
+  "build": "unsigned Release passed",
+  "tests": {
+    "tests": 162,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 4
+  },
+  "passed": 158,
+  "skipped": [
+    "androidx.media3.decoder.ffmpeg.AudioNativeSmokeTest.eac3SixChannelsProduceAudiblePcm",
+    "androidx.media3.decoder.ffmpeg.AudioNativeSmokeTest.mp3ProducesAudiblePcm",
+    "androidx.media3.decoder.ffmpeg.AudioNativeSmokeTest.commonAudioFormatsHaveSoftwareDecoders",
+    "androidx.media3.decoder.ffmpeg.AudioNativeSmokeTest.aacProducesAudiblePcm"
+  ],
+  "lint": {
+    "Fatal": 0,
+    "Error": 0,
+    "Warning": 72
+  },
+  "apkSHA256": "2f533d3b92c7b8f671117521d8f2a8c564740dc16820128dabf412f8edf99440",
+  "apkBytes": 10965028,
+  "abis": [
+    "armeabi-v7a"
+  ],
+  "playerAndSubtitleImplementationUnchanged": true,
+  "physicalDeviceTesting": false,
+  "liveTelegramAccountTesting": false,
+  "published": false,
+  "publishBlockers": [
+    "Persistent signing material unavailable in this workspace; configure existing Actions signing secrets",
+    "Telegram app API ID/hash not configured in observed Actions run"
+  ],
+  "reference": "dracu-lah/TMPlayer@268b02d9ca8835385802037ae5241d142fa0c066"
+}

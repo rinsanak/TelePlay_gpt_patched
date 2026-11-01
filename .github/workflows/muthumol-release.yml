@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       TG_API_ID: ${{ secrets.TG_API_ID }}
       TG_API_HASH: ${{ secrets.TG_API_HASH }}
@@ -27,6 +27,22 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - name: Install SDK
+        run: sdkmanager 'platforms;android-35' 'build-tools;34.0.0' 'build-tools;35.0.0'
+      - name: Validate source before signing
+        working-directory: muthumol-tv
+        run: bash gradlew --no-daemon --max-workers=2 -I tools/unsigned-release.gradle :app:testDebugUnitTest :app:lintRelease :app:assembleRelease
+      - name: Retain validation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TG-stream-validation
+          path: |
+            muthumol-tv/app/build/reports/
+            muthumol-tv/app/build/test-results/
       - name: Check signing prerequisite
         env:
           SIGNING_KEY: ${{ secrets.MUTHUMOL_KEYSTORE_BASE64 }}
@@ -43,11 +59,9 @@ jobs:
           umask 077
           printf '%s' "$SIGNING_KEY" | base64 --decode > "$RUNNER_TEMP/muthumol.keystore"
           echo "MUTHUMOL_SIGNING_KEY=$RUNNER_TEMP/muthumol.keystore" >> "$GITHUB_ENV"
-      - name: Install SDK
-        run: sdkmanager 'platforms;android-35' 'build-tools;34.0.0' 'build-tools;35.0.0'
-      - name: Test, lint and build signed release
+      - name: Build signed release
         working-directory: muthumol-tv
-        run: bash gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest :app:lintRelease :app:assembleRelease
+        run: bash gradlew --no-daemon --max-workers=2 :app:assembleRelease
       - name: Stage verified update
         run: |
           set -euo pipefail
@@ -76,3 +90,4 @@ jobs:
       - name: Remove signing material
         if: always()
         run: rm -f "$RUNNER_TEMP/muthumol.keystore"
+
