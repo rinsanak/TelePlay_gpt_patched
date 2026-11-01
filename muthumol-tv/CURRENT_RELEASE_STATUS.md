@@ -12,8 +12,6 @@ See TMPLAYER_HOME_VERIFICATION.json for current automated results. Host renderin
 
 ## Release status
 
-The live updater feed was still V5.6/code 59 when checked. The existing release workflow failed while attempting to install the obsolete Android SDK package `tools`; this revision requests only `platform-tools`, pins the runner to Ubuntu 24.04 and validates tests/lint/unsigned assembly before checking signing prerequisites. Signed publication still uses the existing verifier and atomically commits APK, source and manifest only after validating credentials and the pinned signing certificate.
+Original V5.6 signing key recovered from private Drive TelePlay Projector App/build-signing/debug.keystore. Its PrivateKeyEntry certificate matches V5.6 exactly (26e7b63fcdd306fe3f52a0172a3180160c0aee359a6c00f933ded41e8c0b8318). Keep alias androiddebugkey and the original identity; no uninstall migration. The old replacement-key setup is obsolete.
 
-Actions logs for run 41329290938 showed empty TG_API_ID, TG_API_HASH and signing-password environment bindings. The protected persistent key from the earlier environment is not present in this workspace. No new key was generated and no unconfigured/unsigned APK was published as a working update. Configure the existing signing identity and Telegram application credentials through Actions secrets; then run the release workflow. Check the actual workflow result and live latest.json before claiming Update now is available.
-
-The previously authorized persistent certificate is 70db42e5a1ee6f2fe4e9b5b63ac6a90360e89466d9a1bb1ee5147a57d0316460. Migration from the old V5.6 identity requires one reinstall; subsequent releases must retain the persistent key. See RELEASE_UPDATES.md for secure setup.
+The user has supplied TG_API_ID and TG_API_HASH in Repository secrets; CI confirmed the configured values pass format validation. CI run 41335165595 is preparing a configured unsigned APK with tests and release lint. Protected local signing with the original key and verified signed feed publication are pending. Source publication and unsigned preparation do not mean Update now is available. See RELEASE_UPDATES.md.
