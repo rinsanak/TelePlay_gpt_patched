@@ -1,27 +1,15 @@
 {
-  "tests": {
-    "tests": 147,
-    "failures": 0,
-    "errors": 0,
-    "skipped": 4
-  },
-  "passed": 143,
-  "lint": {
-    "Warning": 75
-  },
-  "changed_existing_files": [
-    "app/src/main/java/com/muthumol/player/dummy/MainActivity.java",
-    "app/src/main/java/com/muthumol/player/dummy/PosterArtView.java",
-    "app/src/main/java/com/muthumol/player/dummy/TvLibrary.java",
-    "app/src/test/java/com/muthumol/player/dummy/PlayerApi25Test.java"
-  ],
-  "native_libraries": [
-    "lib/armeabi-v7a/libffmpegJNI.so",
-    "lib/armeabi-v7a/libtdjni.so"
-  ],
-  "player_source_unchanged": true,
-  "apk_signed": false,
-  "apk_sha256": "bf42733fd680c3781c18cfc1ca33602c647b343aba262e885ab6cc2e4fc11eb4",
-  "versionCode": 61,
-  "versionName": "6.0-beta2"
+  "versionCode": 62,
+  "versionName": "6.0-beta3",
+  "tests": 151,
+  "passed": 147,
+  "skipped": 4,
+  "failures": 0,
+  "apk_signed": true,
+  "certificate_sha256": "70db42e5a1ee6f2fe4e9b5b63ac6a90360e89466d9a1bb1ee5147a57d0316460",
+  "apk_sha256": "e40e4e4e23ae137769df7adadd110a320e3af0a6ce565ed761580e89e06d7a8f",
+  "telegram_build_credentials_available": false,
+  "publishable": false,
+  "signing_saved_to_github": false,
+  "physical_tv_tested": false
 }

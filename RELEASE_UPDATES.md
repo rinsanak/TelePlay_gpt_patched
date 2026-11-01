@@ -1,21 +1,23 @@
-# Recurring Muthumol TV updates
+# Recurring Muthumol TV releases
 
-Source lives in `muthumol-tv/` on main. The existing TV updater continues reading `latest.json` on `tg-stream-updates`. Keep the same application ID and original signing key.
+Source: `muthumol-tv/` on main. APK/source/manifest destination: existing `tg-stream-updates` branch. Current candidate: 62 / 6.0-beta3.
 
-## One-time signing setup
+## Signing migration authorized by the user
 
-In GitHub repository Settings > Secrets and variables > Actions, create **MUTHUMOL_KEYSTORE_BASE64** from the ORIGINAL keystore, encoded as base64. This is sensitive signing material: use the secret UI, never a commit, issue or message. The existing project expects alias `androiddebugkey`, store password `android`, key password `android`. The published V5.6 certificate was independently verified as SHA256 `26e7b63fcdd306fe3f52a0172a3180160c0aee359a6c00f933ded41e8c0b8318`. A newly generated debug key will NOT match.
+The original V5.6 private key was not found in the available repository history or supplied files. GitHub API access is currently blocked by the cloud network policy, so server-side Actions secret inventory could not be inspected. The user explicitly authorized a replacement if recovery was not possible. A new persistent key was generated and protected outside the checkout under `/workspace/private-signing`; it has NOT yet been saved to GitHub Secrets. Preserve these files; do not regenerate the key.
 
-The original private key cannot be recovered from an APK. Without it, an update over the installed app is impossible. Do not replace the key or publish an unsigned/mismatched APK to work around this.
+New public certificate SHA256: `70db42e5a1ee6f2fe4e9b5b63ac6a90360e89466d9a1bb1ee5147a57d0316460`. Old V5.6 SHA256: `26e7b63fcdd306fe3f52a0172a3180160c0aee359a6c00f933ded41e8c0b8318`. The new identity requires one uninstall/reinstall and Telegram sign-in again; it cannot update the old installation in place. After migration all later APKs must use the new persistent key.
 
-## Every update
+## Required secure GitHub configuration
 
-1. Make source changes under `muthumol-tv/`.
-2. Increase `versionCode` and set `versionName` in `muthumol-tv/app/build.gradle`. This revision uses 61 / 6.0-beta2.
-3. Push to main. The Muthumol workflow runs tests, lint and a signed release build. It verifies the installed-app certificate, APK package/version and SHA256.
-4. After checks pass, one commit on `tg-stream-updates` publishes APK, versioned source ZIP and latest.json together. The old app's Check for update uses this manifest. The source archive and reports are also retained as workflow artifacts.
-5. On the TV choose Check for update, then allow Android's installer prompt. This is not a silent install.
+Actions secrets: `MUTHUMOL_KEYSTORE_BASE64`, `MUTHUMOL_STORE_PASSWORD`, `MUTHUMOL_KEY_PASSWORD`, `TG_API_ID`, `TG_API_HASH`. Actions variable `MUTHUMOL_KEY_ALIAS`: `muthumol-release`. Encode the protected keystore as base64 only when sending it to the secret API; never commit key material or passwords.
 
-Missing secrets, wrong signatures, failed tests/lint or non-increasing version codes stop publication. A source push alone does not mean the APK/feed was published: check that the workflow succeeded and the feed shows the intended version. The old feed stays active if publication fails. Parallel releases are serialized; no force pushes are used. Workflow changes are reviewed through normal source control.
+Telegram still requires the publisher's own API ID/hash internally. Phone and QR authenticate the user's account, not the application. The TV no longer asks users for developer credentials. Build-time values come from the publisher's Actions secrets; APK-embedded application credentials cannot be treated as unextractable. Preserve existing configured credentials on legacy installations. A build without application credentials has no API-entry form and explains that sign-in is unavailable. The release workflow and publisher reject absent credentials before changing the live feed.
 
-The older `publish-tg-stream.yml` workflow on the feed branch only triggers when that workflow file itself changes. This new publisher does not modify it or rely on expiring chat attachment URLs.
+## Every release
+
+Increase versionCode and versionName, push source to main, and verify the workflow succeeds. It runs tests/lint and signed assembly, then checks the pinned certificate, package, version and checksum. It publishes the APK, source ZIP and latest.json in one feed-branch commit. Wrong signatures, missing prerequisites, test failures and stale version codes leave the feed unchanged. Do not use expiring attachment URLs. Native ARM tests skipped on x86 do not establish TV playback.
+
+GitHub API access to `api.github.com` was requested in the environment draft. The draft must be applied before this agent can inspect or save Actions secrets. Source Git push access works independently. Once secure prerequisites are supplied, rerun the workflow and verify the live manifest; source publication alone is not an APK release.
+
+After API access is enabled, the agent can securely upload the already generated signing material using `python muthumol-tv/tools/configure-release-secrets.py /workspace/private-signing`. This helper sends values over stdin to gh secret set; it does not print or commit them. Existing Telegram secret bindings are preserved unless actual TG_API_ID/TG_API_HASH are supplied in the process.

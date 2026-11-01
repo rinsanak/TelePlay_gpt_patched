@@ -12,6 +12,12 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      TG_API_ID: ${{ secrets.TG_API_ID }}
+      TG_API_HASH: ${{ secrets.TG_API_HASH }}
+      MUTHUMOL_STORE_PASSWORD: ${{ secrets.MUTHUMOL_STORE_PASSWORD }}
+      MUTHUMOL_KEY_PASSWORD: ${{ secrets.MUTHUMOL_KEY_PASSWORD }}
+      MUTHUMOL_KEY_ALIAS: ${{ vars.MUTHUMOL_KEY_ALIAS || 'muthumol-release' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,7 +33,11 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "$SIGNING_KEY" ]; then
-            echo '::error::Add the ORIGINAL signing keystore as repository Actions secret MUTHUMOL_KEYSTORE_BASE64. No APK/feed will be published without it.'
+            echo '::error::Configure persistent signing secrets before publishing an APK.'
+            exit 1
+          fi
+          if [ -z "$TG_API_ID" ] || [ -z "$TG_API_HASH" ] || [ -z "$MUTHUMOL_STORE_PASSWORD" ] || [ -z "$MUTHUMOL_KEY_PASSWORD" ]; then
+            echo '::error::Configure TG_API_ID, TG_API_HASH and the signing passwords in Actions secrets. End users will only see phone/QR login.'
             exit 1
           fi
           umask 077

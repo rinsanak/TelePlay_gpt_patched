@@ -148,7 +148,7 @@ class TelegramBridge {
         state = type(a);qrLink=str(a,"link");
         ready = state.equals("AuthorizationStateReady");
         if (state.equals("AuthorizationStateWaitTdlibParameters")
-            && !secrets.get("api_id").isEmpty()) parameters();
+            && configured()) parameters();
         notifyState();
         if (state.equals("AuthorizationStateClosed")) ui.post(this::start);
         break;
@@ -216,9 +216,9 @@ class TelegramBridge {
           "useSecretChats",
           false,
           "apiId",
-          Integer.parseInt(secrets.get("api_id")),
+          Integer.parseInt(apiId()),
           "apiHash",
-          secrets.get("api_hash"),
+          apiHash(),
           "systemLanguageCode",
           "en",
           "deviceModel",
@@ -232,9 +232,10 @@ class TelegramBridge {
     }
   }
 
-  boolean configured() {
-    return !secrets.get("api_id").isEmpty();
-  }
+  String apiId(){return secrets.get("api_id").isEmpty()?Integer.toString(BuildConfig.TG_API_ID):secrets.get("api_id");}
+  String apiHash(){return secrets.get("api_hash").isEmpty()?BuildConfig.TG_API_HASH:secrets.get("api_hash");}
+  boolean configured() {try{return Integer.parseInt(apiId())>0&&apiHash().matches("[a-fA-F0-9]{32}");}catch(NumberFormatException e){return false;}}
+
 
   void login(String value) {
     switch (state) {

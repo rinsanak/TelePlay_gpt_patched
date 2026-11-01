@@ -1,3 +1,5 @@
+> **6.0-beta3 / versionCode 62:** show → season → episode browsing and phone/QR-only login UI are implemented. See [current verification](CURRENT_RELEASE_STATUS.md). Signed diagnostic build passed host checks; Telegram build credentials and secure GitHub signing persistence remain blocked. Do not treat it as a functional published login release.
+
 > **2026-11-01 UI revision:** See [current verification](UI_REVISION_REPORT.md) and [TMPlayer comparison](FEATURE_COMPARISON.md). This revision is built unsigned; the signing and test claims below describe the supplied beta1 archive, not this revision. Android version identifiers are now 61 / 6.0-beta2; no updater release has been published.
 
 # Muthumol TV 6.0 Beta 1

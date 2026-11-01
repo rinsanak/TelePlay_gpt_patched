@@ -9,12 +9,14 @@ import subprocess
 import sys
 import xml.etree.ElementTree as ET
 
-CERT = '26e7b63fcdd306fe3f52a0172a3180160c0aee359a6c00f933ded41e8c0b8318'
+CERT = '70db42e5a1ee6f2fe4e9b5b63ac6a90360e89466d9a1bb1ee5147a57d0316460'
 PACKAGE = 'com.muthumol.player.dummy'
 BASE = 'https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/'
 
 
 def stage(destination):
+    if not re.fullmatch(r'[1-9][0-9]*', os.getenv('TG_API_ID', '')) or not re.fullmatch(r'[a-fA-F0-9]{32}', os.getenv('TG_API_HASH', '')):
+        raise ValueError('Telegram app build credentials are required for a publishable login-enabled release')
     project = Path('muthumol-tv')
     build = project / 'app/build'
     apk = build / 'outputs/apk/release/app-release.apk'
@@ -24,7 +26,7 @@ def stage(destination):
     cert = subprocess.check_output([str(tools / 'apksigner'), 'verify', '--min-sdk-version', '25', '--print-certs', str(apk)], text=True)
     fingerprints = re.findall(r'certificate SHA-256 digest: ([a-f0-9]+)', cert)
     if fingerprints != [CERT]:
-        raise ValueError('APK must use the original installed-app signing certificate')
+        raise ValueError('APK must use the persistent Muthumol release signing certificate')
     badging = subprocess.check_output([str(tools / 'aapt'), 'dump', 'badging', str(apk)], text=True)
     package = re.search(r"package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", badging)
     if not package or package[1] != PACKAGE:
@@ -49,7 +51,7 @@ def stage(destination):
     shutil.copy2(apk, destination / name)
     manifest = dict(versionCode=code, versionName=version, url=BASE + 'apks/' + name,
                     sha256=hashlib.sha256(apk.read_bytes()).hexdigest(),
-                    notes='Cinema Home UI, direct collections, improved remote navigation and typo-tolerant search. Existing subtitles retained. No Cast.')
+                    notes='LOST-style series/season/episode browsing and phone/QR login. Signing identity changes from V5.6: uninstall old app once, install this version, then future updates use this key. Existing subtitles retained. No Cast.')
     (destination / 'latest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     print(f'Verified signed {version} ({code}); staged APK and manifest')
 
