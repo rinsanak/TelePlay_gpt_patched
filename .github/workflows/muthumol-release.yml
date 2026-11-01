@@ -17,11 +17,27 @@ jobs:
       TG_API_HASH: ${{ secrets.TG_API_HASH }}
       MUTHUMOL_STORE_PASSWORD: ${{ secrets.MUTHUMOL_STORE_PASSWORD }}
       MUTHUMOL_KEY_PASSWORD: ${{ secrets.MUTHUMOL_KEY_PASSWORD }}
-      MUTHUMOL_KEY_ALIAS: ${{ vars.MUTHUMOL_KEY_ALIAS || 'muthumol-release' }}
+      MUTHUMOL_KEY_ALIAS: muthumol-release
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Check signing prerequisite
+        env:
+          SIGNING_KEY: ${{ secrets.MUTHUMOL_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SIGNING_KEY" ]; then
+            echo '::error::Signing key missing. Open muthumol-tv/tools/signing-setup.html to prepare the three signing secrets.'
+            exit 1
+          fi
+          if [ -z "$TG_API_ID" ] || [ -z "$TG_API_HASH" ] || [ -z "$MUTHUMOL_STORE_PASSWORD" ] || [ -z "$MUTHUMOL_KEY_PASSWORD" ]; then
+            echo '::error::Configure TG_API_ID, TG_API_HASH and the signing passwords in Actions secrets. End users will only see phone/QR login.'
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$SIGNING_KEY" | base64 --decode > "$RUNNER_TEMP/muthumol.keystore"
+          echo "MUTHUMOL_SIGNING_KEY=$RUNNER_TEMP/muthumol.keystore" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -43,22 +59,6 @@ jobs:
           path: |
             muthumol-tv/app/build/reports/
             muthumol-tv/app/build/test-results/
-      - name: Check signing prerequisite
-        env:
-          SIGNING_KEY: ${{ secrets.MUTHUMOL_KEYSTORE_BASE64 }}
-        run: |
-          set -euo pipefail
-          if [ -z "$SIGNING_KEY" ]; then
-            echo '::error::Configure persistent signing secrets before publishing an APK.'
-            exit 1
-          fi
-          if [ -z "$TG_API_ID" ] || [ -z "$TG_API_HASH" ] || [ -z "$MUTHUMOL_STORE_PASSWORD" ] || [ -z "$MUTHUMOL_KEY_PASSWORD" ]; then
-            echo '::error::Configure TG_API_ID, TG_API_HASH and the signing passwords in Actions secrets. End users will only see phone/QR login.'
-            exit 1
-          fi
-          umask 077
-          printf '%s' "$SIGNING_KEY" | base64 --decode > "$RUNNER_TEMP/muthumol.keystore"
-          echo "MUTHUMOL_SIGNING_KEY=$RUNNER_TEMP/muthumol.keystore" >> "$GITHUB_ENV"
       - name: Build signed release
         working-directory: muthumol-tv
         run: bash gradlew --no-daemon --max-workers=2 :app:assembleRelease

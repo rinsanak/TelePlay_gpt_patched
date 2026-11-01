@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ml"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; form-action 'none'; base-uri 'none'">
+<title>TG stream signing setup</title>
+<style>body{background:#0c0e10;color:#f2f4f5;font:17px/1.65 system-ui,sans-serif;max-width:640px;margin:auto;padding:24px}h1{font-size:27px;line-height:1.3}p{color:#aeb5bb}label{display:block;margin-top:22px}input,textarea,button{box-sizing:border-box;width:100%;font:inherit;border-radius:12px;padding:14px;margin-top:8px;border:1px solid #2e3337;background:#15181b;color:#f2f4f5}button{background:#79d0f5;color:#003546;font-weight:700;cursor:pointer}button:disabled{opacity:.5}textarea{height:110px;font:14px monospace}code{overflow-wrap:anywhere;color:#79d0f5}a{color:#79d0f5}.card{margin:24px 0;padding:18px;border:1px solid #2e3337;border-radius:14px}#status{color:#79d0f5}small{color:#aeb5bb}</style>
+<h1>TG stream update setup</h1>
+<p>TG_API_ID, TG_API_HASH നിങ്ങൾ ഇതിനകം ചേർത്തിട്ടുണ്ട്. ഇനി signing വിവരങ്ങൾ മാത്രം നൽകുക.</p>
+<p>ഈ form ഫോണിൽ മാത്രം പ്രവർത്തിക്കും. തിരഞ്ഞെടുക്കുന്ന key-യും passwords-ഉം upload ചെയ്യുകയോ save ചെയ്യുകയോ ഇല്ല.</p>
+<div class="card"><strong>പഴയ key backup വേണം</strong><p>മുമ്പ് ഉപയോഗിച്ച <code>muthumol-release.jks</code> തിരഞ്ഞെടുക്കുക. APK ഫയൽ ഇവിടെ ഉപയോഗിക്കാൻ കഴിയില്ല. Key backup ഇല്ലെങ്കിൽ ഈ setup പൂർത്തിയാക്കാനാകില്ല.</p></div>
+<label>1. Signing key file (.jks / .keystore)<input id="keyfile" type="file" accept=".jks,.keystore"></label>
+<label>2. Keystore password<input id="storepass" type="password" autocomplete="off"></label>
+<label>3. Key password<input id="keypass" type="password" autocomplete="off"></label>
+<label><input id="same" type="checkbox" style="width:auto"> രണ്ട് passwords-ഉം ഒരേതാണ്</label>
+<button id="prepare">Copy ചെയ്യാനുള്ള values തയ്യാറാക്കുക</button>
+<p id="status" role="status"></p>
+<div id="result" hidden><p>താഴെയുള്ള ഓരോ Name-ഉം Value-ഉം GitHub-ൽ New repository secret അമർത്തി ചേർക്കുക.</p>
+<div id="cards"></div>
+<p><a href="https://github.com/rinsanak/TelePlay_gpt_patched/settings/secrets/actions/new" target="_blank" rel="noopener noreferrer">GitHub — New repository secret തുറക്കുക ↗</a></p>
+<p>മൂന്നും save ചെയ്താൽ ഈ chat-ൽ <strong>“ചേർത്തു”</strong> എന്ന് പറയുക. Password ഇവിടെ അയക്കേണ്ട.</p></div>
+<button id="clear">എല്ലാ fields-ഉം മായ്ക്കുക</button>
+<script>
+const $=id=>document.getElementById(id);let secretValues=[];
+function invalidate(){secretValues=[];$('cards').replaceChildren();$('result').hidden=true;$('status').textContent='';}
+function sync(){ $('keypass').disabled=$('same').checked;invalidate();}
+$('same').onchange=sync;for(const id of ['keyfile','storepass','keypass'])$(id).oninput=invalidate;
+async function copy(value,area){try{await navigator.clipboard.writeText(value);$('status').textContent='Copied — GitHub Secret field-ൽ paste ചെയ്യുക.';}catch(e){area.focus();area.select();$('status').textContent='Value select ചെയ്തു. Long press → Copy ഉപയോഗിക്കുക.';}}
+$('prepare').onclick=async()=>{invalidate();const file=$('keyfile').files[0],store=$('storepass').value,key=$('same').checked?store:$('keypass').value;
+if(!file||!store||!key){$('status').textContent='Key file-ഉം രണ്ട് passwords-ഉം നൽകുക.';return;}
+if(file.size>30000){$('status').textContent='File വളരെ വലുതാണ്. സാധാരണ release key (.jks) തിരഞ്ഞെടുക്കുക.';return;}
+try{const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(const b of bytes)binary+=String.fromCharCode(b);
+secretValues=[['MUTHUMOL_KEYSTORE_BASE64',btoa(binary)],['MUTHUMOL_STORE_PASSWORD',store],['MUTHUMOL_KEY_PASSWORD',key]];
+for(const [name,value]of secretValues){const card=document.createElement('div');card.className='card';const title=document.createElement('code');title.textContent=name;const nameCopy=document.createElement('button');nameCopy.textContent='Copy Name';const area=document.createElement('textarea');area.readOnly=true;area.value=value;area.setAttribute('aria-label',name+' value');area.spellcheck=false;const valCopy=document.createElement('button');valCopy.textContent='Copy Value';nameCopy.onclick=()=>{area.value=name;copy(name,area);};valCopy.onclick=()=>{area.value=value;copy(value,area);};card.append(title,nameCopy,area,valCopy);$('cards').append(card);}
+$('result').hidden=false;$('status').textContent='Values തയ്യാറായി. Key-യും password-ഉം ശരിയാണെന്ന് build പരിശോധിക്കും.';
+}catch(e){$('status').textContent='File വായിക്കാൻ കഴിഞ്ഞില്ല. വീണ്ടും തിരഞ്ഞെടുക്കുക.';}};
+$('clear').onclick=()=>{invalidate();for(const id of ['keyfile','storepass','keypass'])$(id).value='';$('same').checked=false;$('keypass').disabled=false;$('status').textContent='Fields മായ്ച്ചു. Clipboard-ൽ copy ചെയ്ത value പ്രത്യേകം clear ചെയ്യാം.';};
+</script></html>
