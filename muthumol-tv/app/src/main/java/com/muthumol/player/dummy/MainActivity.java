@@ -1,0 +1,179 @@
+package com.muthumol.player.dummy;
+
+import android.app.*;
+import android.content.*;
+import android.graphics.*;
+import android.graphics.drawable.GradientDrawable;
+import android.os.*;
+import android.view.*;
+import android.widget.*;
+import java.util.*;
+import org.json.*;
+
+/** Projector-first library screen with large, predictable remote focus targets. */
+public final class MainActivity extends Activity implements TelegramBridge.Listener,ChannelSession.Listener,ArtworkStore.Listener {
+  static final String[] HOME_SETTINGS_ACTIONS={"Clear cache","Log start","Stop and send","Channel selection","Check for update","Artwork source"};
+  TvLibrary tvLibrary;String libraryFilter="All",libraryQuery="";int librarySort;
+  AppUpdater updater;ArtworkStore artworks;Button[] homeActions;TextView artCredit;
+  static final String[] HOME_FILTERS={"All","Continue","Movies","Series","Watch later","Favourites"};
+  final List<Button> filterButtons=new ArrayList<>();TextView emptyLibrary;Button moreButton;
+  int uiColor;LinearLayout column;TextView status,title,subtitles;Button playFromStartButton,continueButton;
+  PosterArtView poster;TextView resumeSummary,movieState,focusHint;ProgressBar resumeProgress;Button heroContinueButton,stateAction;
+  FrameLayout homeRoot;LinearLayout heroPanel,libraryDock;String previewIdentity="";Movie previewMovie;LinearLayout movieRail;TextView shelfTitle;String shelfKey=null;final List<MovieCardView> movieCards=new ArrayList<>();
+  final Handler homeUi=new Handler(Looper.getMainLooper());
+  final Runnable homeTick=new Runnable(){public void run(){if(foreground&&"home".equals(screen)){changed();homeUi.postDelayed(this,3000);}}};
+  void startHomeTick(){homeUi.removeCallbacks(homeTick);if(foreground&&"home".equals(screen))homeUi.postDelayed(homeTick,3000);}
+  TelegramBridge tg;ChannelSession session;String screen="home";boolean foreground;
+
+  public void onCreate(Bundle state){super.onCreate(state);tvLibrary=new TvLibrary(this);updater=new AppUpdater(this);artworks=ArtworkStore.get(this);BetaLog.init(this);Ui.full(this);openHome();}
+  void openHome(){if(isFinishing())return;tg=TelegramBridge.getInstance(this);session=ChannelSession.get(this);session.add(this);tg.listener=this;home();session.onVisible(this);}
+  protected void onResume(){super.onResume();if(updater!=null)updater.onResume();foreground=true;OfflineDownloads.get(this).visibility(true);artworks.add(this);if(session!=null){session.add(this);session.onVisible(this);tg.listener=this;if("home".equals(screen))refreshHomeColors();changed();startHomeTick();}}
+  protected void onStop(){OfflineDownloads.get(this).visibility(false);homeUi.removeCallbacks(homeTick);foreground=false;artworks.active(false);artworks.remove(this);if(session!=null){session.remove(this);session.onHidden(this);}super.onStop();}
+  protected void onDestroy(){homeUi.removeCallbacks(homeTick);if(artworks!=null)artworks.remove(this);if(updater!=null)updater.close();if(session!=null){session.remove(this);session.onHidden(this);}if(tg!=null&&tg.listener==this)tg.listener=null;super.onDestroy();}
+
+  void page(String name){
+    if(artworks!=null)artworks.active(false);
+    uiColor=Ui.nextMenuColor(this);
+    ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
+    GradientDrawable backdrop=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff101e2d,0xff050a11});scroll.setBackground(backdrop);
+    column=new LinearLayout(this);column.setOrientation(LinearLayout.VERTICAL);column.setPadding(Ui.dp(this,36),Ui.dp(this,22),Ui.dp(this,36),Ui.dp(this,28));scroll.addView(column);setContentView(scroll);
+    TextView brand=Ui.eyebrow(this,"MUTHUMOL  •  TV CINEMA");Ui.add(column,brand);
+    Ui.add(column,Ui.text(this,name,32,Color.WHITE));
+    status=Ui.text(this,"",15,Ui.MUTED);status.setMaxLines(3);Ui.add(column,status);
+  }
+
+  void action(String label,Runnable task){Button b=Ui.button(this,label,task);Ui.add(column,b);if(column.getChildCount()==4)b.requestFocus();}
+
+  void home(){
+    screen="home";uiColor=Ui.ACCENT;float height=getResources().getDisplayMetrics().heightPixels/getResources().getDisplayMetrics().density;boolean compact=height<500;
+    homeRoot=new FrameLayout(this);homeRoot.setBackgroundColor(0xff080c14);poster=new PosterArtView(this);poster.cinematic=true;homeRoot.addView(poster,new FrameLayout.LayoutParams(-1,-1));
+    LinearLayout shell=new LinearLayout(this);shell.setOrientation(LinearLayout.VERTICAL);shell.setPadding(Ui.dp(this,compact?22:30),Ui.dp(this,compact?12:18),Ui.dp(this,compact?22:30),Ui.dp(this,compact?12:18));homeRoot.addView(shell,new FrameLayout.LayoutParams(-1,-1));column=shell;
+    LinearLayout header=new LinearLayout(this);header.setGravity(Gravity.CENTER_VERTICAL);header.setBackground(new GlassSurface(this,24,false,false));header.setPadding(Ui.dp(this,14),Ui.dp(this,4),Ui.dp(this,6),Ui.dp(this,4));TextView brand=Ui.text(this,"MUTHUMOL",compact?18:20,Color.WHITE);brand.setPadding(0,0,0,0);brand.setTypeface(Typeface.DEFAULT_BOLD);brand.setLetterSpacing(.025f);header.addView(brand,new LinearLayout.LayoutParams(0,-2,1));
+    playFromStartButton=Ui.roundButton(this,"⏮","Play from start",()->launchPreview(true));continueButton=Ui.roundButton(this,"▶","Continue",()->launchPreview(false));Button refresh=Ui.roundButton(this,"↻","Refresh latest videos",()->{session.refresh();changed();});Button settings=Ui.roundButton(this,"⚙","Settings",this::settingsPopup);homeActions=new Button[]{playFromStartButton,continueButton,refresh,settings};
+    focusHint=Ui.text(this,"D-pad to explore  ·  Hold OK for options",10,Ui.MUTED);focusHint.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,0);focusHint.setMaxLines(1);focusHint.setEllipsize(android.text.TextUtils.TruncateAt.END);
+    for(Button button:homeActions){button.setId(View.generateViewId());LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(Ui.dp(this,38),Ui.dp(this,38));bp.leftMargin=Ui.dp(this,8);header.addView(button,bp);button.setOnFocusChangeListener((v,f)->styleHomeButton(button,true));styleHomeButton(button,true);}
+    Button search=Ui.roundButton(this,"⌕","Search library",this::searchLibrary);Button browse=Ui.roundButton(this,"☷","Browse collections",this::collections);Button downloads=Ui.roundButton(this,"↓","Offline downloads",()->OfflineDownloads.get(this).show(this));for(Button extra:new Button[]{search,browse,downloads}){extra.setId(View.generateViewId());LinearLayout.LayoutParams e=new LinearLayout.LayoutParams(Ui.dp(this,38),Ui.dp(this,38));e.leftMargin=Ui.dp(this,8);header.addView(extra,e);}homeActions=new Button[]{playFromStartButton,continueButton,search,browse,downloads,refresh,settings};search.setText("Search");browse.setText("Collections");downloads.setText("Downloads");settings.setText("Settings");for(Button button:homeActions){header.removeView(button);boolean labeled=button==search||button==browse||button==downloads||button==settings;button.setTextSize(labeled?12:19);LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(Ui.dp(this,labeled?(button==browse?96:button==downloads?92:76):38),Ui.dp(this,38));bp.leftMargin=Ui.dp(this,8);header.addView(button,bp);button.setOnFocusChangeListener((v,f)->styleHomeButton(button,true));styleHomeButton(button,true);bindHomeLabel(button);}
+    for(int i=0;i<homeActions.length;i++){homeActions[i].setNextFocusLeftId(homeActions[Math.max(0,i-1)].getId());homeActions[i].setNextFocusRightId(homeActions[Math.min(homeActions.length-1,i+1)].getId());}shell.addView(header,new LinearLayout.LayoutParams(-1,Ui.dp(this,compact?46:50)));
+    FrameLayout openSpace=new FrameLayout(this);shell.addView(openSpace,new LinearLayout.LayoutParams(-1,0,1));heroPanel=new LinearLayout(this);heroPanel.setOrientation(LinearLayout.VERTICAL);heroPanel.setPadding(Ui.dp(this,compact?16:22),Ui.dp(this,compact?8:18),Ui.dp(this,compact?16:22),Ui.dp(this,compact?8:18));heroPanel.setBackground(new GlassSurface(this,24,false,false));
+    movieState=Ui.eyebrow(this,"");movieState.setPadding(0,0,0,0);movieState.setTextSize(10);movieState.setTextColor(0xffc5d1e1);title=Ui.text(this,"Your library",compact?20:32,Color.WHITE);title.setTypeface(Typeface.DEFAULT_BOLD);title.setMaxLines(compact?1:2);title.setEllipsize(android.text.TextUtils.TruncateAt.END);subtitles=Ui.text(this,"",compact?12:14,0xffc5d1e1);subtitles.setMaxLines(1);subtitles.setEllipsize(android.text.TextUtils.TruncateAt.END);resumeSummary=Ui.text(this,"",compact?11:12,0xff9daec4);
+    for(TextView v:new TextView[]{movieState,title,subtitles,resumeSummary}){v.setPadding(0,0,0,0);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=Ui.dp(this,compact?2:v==title?7:4);heroPanel.addView(v,lp);}
+    resumeProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);resumeProgress.setMax(1000);resumeProgress.setProgressTintList(android.content.res.ColorStateList.valueOf(0xffd8e2ef));resumeProgress.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(0xff354359));LinearLayout.LayoutParams pp=new LinearLayout.LayoutParams(Ui.dp(this,160),Ui.dp(this,2));pp.bottomMargin=Ui.dp(this,compact?4:10);heroPanel.addView(resumeProgress,pp);
+    heroContinueButton=Ui.button(this,"▶  PLAY",()->continueButton.performClick());heroContinueButton.setId(View.generateViewId());heroContinueButton.setTextSize(13);heroContinueButton.setMinHeight(0);heroContinueButton.setMinimumHeight(0);heroContinueButton.setPadding(Ui.dp(this,14),0,Ui.dp(this,14),0);heroContinueButton.setOnFocusChangeListener((v,f)->styleHomeButton(heroContinueButton,false));styleHomeButton(heroContinueButton,false);LinearLayout heroActions=new LinearLayout(this);heroActions.setGravity(Gravity.CENTER_VERTICAL);heroActions.addView(heroContinueButton,new LinearLayout.LayoutParams(Ui.dp(this,164),Ui.dp(this,compact?34:38)));
+    moreButton=Ui.button(this,"More options",()->{Movie m=displayedMovie();if(m!=null)movieOptions(m);});moreButton.setId(View.generateViewId());moreButton.setTextSize(12);moreButton.setMinHeight(0);moreButton.setMinimumHeight(0);moreButton.setPadding(Ui.dp(this,12),0,Ui.dp(this,12),0);LinearLayout.LayoutParams moreParams=new LinearLayout.LayoutParams(Ui.dp(this,124),Ui.dp(this,compact?34:38));moreParams.leftMargin=Ui.dp(this,10);heroActions.addView(moreButton,moreParams);heroPanel.addView(heroActions);
+    heroContinueButton.setNextFocusRightId(moreButton.getId());moreButton.setNextFocusLeftId(heroContinueButton.getId());moreButton.setNextFocusUpId(settings.getId());
+    status=Ui.text(this,"",12,Ui.MUTED);status.setMaxLines(2);status.setPadding(0,Ui.dp(this,3),0,0);heroPanel.addView(status);stateAction=Ui.button(this,"Refresh",()->{if(movieCards.isEmpty()&&(!libraryFilter.equals("All")||!libraryQuery.isEmpty()))selectHomeFilter("All");else if(session.channelId==0)settingsPopup();else if(session.movie!=null&&session.store!=null&&session.store.failed())continueButton.performClick();else session.refresh();});stateAction.setId(View.generateViewId());stateAction.setContentDescription("Resolve movie status");stateAction.setTextSize(12);stateAction.setMinHeight(0);stateAction.setMinimumHeight(0);heroPanel.addView(stateAction,new LinearLayout.LayoutParams(-2,Ui.dp(this,34)));
+    FrameLayout.LayoutParams hp=new FrameLayout.LayoutParams((int)(getResources().getDisplayMetrics().widthPixels*.59f),-2,Gravity.LEFT|Gravity.CENTER_VERTICAL);openSpace.addView(heroPanel,hp);
+    libraryDock=new LinearLayout(this);libraryDock.setTag("glass-library");libraryDock.setOrientation(LinearLayout.VERTICAL);libraryDock.setPadding(Ui.dp(this,compact?8:12),Ui.dp(this,compact?5:8),Ui.dp(this,compact?8:12),Ui.dp(this,compact?6:8));libraryDock.setBackground(new GlassSurface(this,24,false,false));shell.addView(libraryDock,new LinearLayout.LayoutParams(-1,-2));
+    shelfTitle=Ui.text(this,"Your library",compact?13:15,Color.WHITE);shelfTitle.setTypeface(Typeface.DEFAULT_BOLD);shelfTitle.setPadding(Ui.dp(this,4),Ui.dp(this,2),0,Ui.dp(this,5));HorizontalScrollView filters=new HorizontalScrollView(this);filters.setHorizontalScrollBarEnabled(false);LinearLayout chips=new LinearLayout(this);filters.addView(chips);filterButtons.clear();
+    for(String filter:HOME_FILTERS){Button chip=Ui.button(this,filter,()->selectHomeFilter(filter));chip.setId(View.generateViewId());chip.setTextSize(compact?10:11);chip.setMinHeight(0);chip.setMinimumHeight(0);chip.setMinWidth(0);chip.setMinimumWidth(0);chip.setPadding(Ui.dp(this,12),0,Ui.dp(this,12),0);chip.setContentDescription(filter+" collection");LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-2,Ui.dp(this,compact?28:32));cp.rightMargin=Ui.dp(this,6);chips.addView(chip,cp);filterButtons.add(chip);chip.setOnFocusChangeListener((v,f)->styleFilter(chip,filter));}
+    libraryDock.addView(filters,new LinearLayout.LayoutParams(-1,-2));libraryDock.addView(shelfTitle);
+    emptyLibrary=Ui.text(this,"",compact?12:14,Ui.MUTED);emptyLibrary.setPadding(Ui.dp(this,8),Ui.dp(this,10),Ui.dp(this,8),Ui.dp(this,10));emptyLibrary.setMaxLines(2);libraryDock.addView(emptyLibrary);
+    HorizontalScrollView shelf=new HorizontalScrollView(this);shelf.setTag("bottom-library");shelf.setHorizontalScrollBarEnabled(false);shelf.setClipToPadding(false);shelf.setClipChildren(false);movieRail=new LinearLayout(this);movieRail.setOrientation(LinearLayout.HORIZONTAL);movieRail.setClipChildren(false);shelf.addView(movieRail);libraryDock.addView(shelf,new LinearLayout.LayoutParams(-1,-2));movieCards.clear();shelfKey=null;
+    libraryDock.addView(focusHint);artCredit=new TextView(this);artCredit.setVisibility(View.GONE);previewIdentity="";
+    for(Button button:homeActions)button.setNextFocusDownId(heroContinueButton.getId());heroContinueButton.setNextFocusUpId(continueButton.getId());heroContinueButton.setNextFocusLeftId(heroContinueButton.getId());heroContinueButton.setNextFocusRightId(moreButton.getId());stateAction.setNextFocusUpId(heroContinueButton.getId());bindHomeLabel(stateAction);
+    setContentView(homeRoot);TvMotion.enter(header,0);TvMotion.enter(heroPanel,70);TvMotion.enter(libraryDock,140);changed();if(session.movie==null)settings.requestFocus();else heroContinueButton.requestFocus();startHomeTick();
+  }
+  void styleHomeButton(Button b,boolean round){boolean focused=b.hasFocus();boolean emphasized=b==heroContinueButton&&b.isEnabled();b.setBackground(new GlassSurface(this,round?19:18,focused||emphasized,true));b.setTextColor(focused||emphasized?0xff10243a:Color.WHITE);float scale=focused?1.035f:1;b.animate().cancel();if(b.isAttachedToWindow()&&TvMotion.enabled(b))b.animate().scaleX(scale).scaleY(scale).setDuration(140).start();else{b.setScaleX(scale);b.setScaleY(scale);}}
+  @Override public void artworkChanged(){if(foreground&&"home".equals(screen))changed();}
+  void bindHomeLabel(Button b){View.OnFocusChangeListener previous=b.getOnFocusChangeListener();b.setOnFocusChangeListener((v,f)->{if(previous!=null)previous.onFocusChange(v,f);if(f&&focusHint!=null)focusHint.setText(v.getContentDescription());});}
+
+  void refreshHomeColors(){uiColor=Ui.ACCENT;if(column!=null)Ui.recolor(column);if(poster!=null)poster.show(displayedMovie(),uiColor);if(resumeProgress!=null)resumeProgress.setProgressTintList(android.content.res.ColorStateList.valueOf(uiColor));if(homeActions!=null)for(Button b:homeActions)styleHomeButton(b,true);if(heroContinueButton!=null)styleHomeButton(heroContinueButton,false);for(int i=0;i<filterButtons.size();i++)styleFilter(filterButtons.get(i),HOME_FILTERS[i]);}
+
+  public void changed(){
+    if(!screen.equals("home")||session==null)return;
+    updateShelf();Movie m=displayedMovie();artworks.active(foreground&&tg.ready);if(foreground&&tg.ready)artworks.prefetch(session.recentMovies,m);String identity=m==null?"":m.cacheIdentity();if(!identity.equals(previewIdentity)){boolean animate=!previewIdentity.isEmpty()&&heroPanel!=null&&heroPanel.isAttachedToWindow();previewIdentity=identity;if(animate){heroPanel.animate().cancel();heroPanel.setAlpha(.8f);heroPanel.animate().alpha(1).setDuration(160).start();}}
+    if(title!=null)title.setText(m==null?(libraryFilter.equals("All")&&libraryQuery.isEmpty()?"Your cinema awaits":libraryQuery.isEmpty()?libraryFilter:"No matches"):MediaTitle.parse(m.title).name);
+    if(playFromStartButton!=null)playFromStartButton.setEnabled(m!=null);
+    if(continueButton!=null)continueButton.setEnabled(m!=null);
+    if(subtitles!=null){
+      if(m==null)subtitles.setText(movieCards.isEmpty()&&(!libraryFilter.equals("All")||!libraryQuery.isEmpty())?"Explore All to find your next watch.":"Choose a channel in Settings to start watching.");
+      else {MediaTitle parsed=MediaTitle.parse(m.title);StringBuilder detail=new StringBuilder(parsed.episodic()?String.format(Locale.US,"SERIES  •  S%02d E%02d",parsed.season,parsed.episode):parsed.year>0?"MOVIE  •  "+parsed.year:"MOVIE");detail.append("   •   ").append(size(m.size));if(session.cacheMatches(m)&&!session.subtitlePath.isEmpty())detail.append("\nSubtitle ready   •   ").append(session.subtitleName);subtitles.setText(detail.toString());}
+    }
+    if(status!=null)status.setText(session.note==null?"":session.note);
+    if(poster!=null)poster.show(m,uiColor);
+    if(heroContinueButton!=null){
+      boolean matching=session.cacheMatches(m);long duration=m==null?0:(matching&&session.index!=null&&session.index.durationUs>0?session.index.durationUs/1000:m.duration*1000L);
+      if(m!=null&&duration<=0)duration=getSharedPreferences("player",0).getLong("duration:"+m.cacheIdentity(),0);
+      long pos=m==null?0:m.savedPosition(this);heroContinueButton.setEnabled(m!=null);styleHomeButton(heroContinueButton,false);heroContinueButton.setText(pos>0?"▶  CONTINUE":"▶  PLAY");heroContinueButton.setContentDescription(pos>0?"Continue movie":"Play movie");if(heroContinueButton.hasFocus()&&focusHint!=null)focusHint.setText(heroContinueButton.getContentDescription());resumeSummary.setText(CinemaInfo.resume(pos,duration));resumeProgress.setProgress(CinemaInfo.progress(pos,duration));
+      ReadAheadStore store=matching?session.store:null;long cached=store==null?0:store.cachedBytes();boolean failed=(store!=null&&store.failed())||((m==null||session.movie==null||m.cacheIdentity().equals(session.movie.cacheIdentity()))&&CinemaInfo.error(session.note));boolean complete=m!=null&&store!=null&&cached>=m.size&&store.fullyCached();
+      movieState.setVisibility(m==null||getResources().getDisplayMetrics().heightPixels/getResources().getDisplayMetrics().density<500?View.GONE:View.VISIBLE);movieState.setText(m==null?"":MediaTitle.parse(m.title).episodic()?"SERIES  /  "+libraryFilter.toUpperCase(Locale.ROOT):"FEATURE FILM  /  "+libraryFilter.toUpperCase(Locale.ROOT));if(moreButton!=null)moreButton.setEnabled(m!=null);resumeSummary.setVisibility(pos>0?View.VISIBLE:View.GONE);resumeProgress.setVisibility(pos>0?View.VISIBLE:View.GONE);
+      status.setVisibility(m==null||failed?View.VISIBLE:View.GONE);
+      stateAction.setVisibility(m==null||failed?View.VISIBLE:View.GONE);stateAction.setText(movieCards.isEmpty()&&(!libraryFilter.equals("All")||!libraryQuery.isEmpty())?"Show all":session.channelId==0?"Choose channel":failed?"Retry":"Refresh");ArtworkStore.Entry art=artworks.cached(m);if(artCredit!=null)artCredit.setText(art==null?"": "Artwork: "+art.source+" · "+art.kind);
+    }
+  }
+
+  void styleFilter(Button chip,String filter){boolean selected=libraryFilter.equals(filter)&&libraryQuery.isEmpty();chip.setSelected(selected);chip.setTextColor(chip.hasFocus()?0xff08121c:selected?Ui.ACCENT:Ui.MUTED);chip.setBackground(new GlassSurface(this,14,chip.hasFocus(),true));}
+  void selectHomeFilter(String filter){libraryFilter=filter;libraryQuery="";previewMovie=null;shelfKey=null;changed();}
+  Movie displayedMovie(){if(previewMovie!=null)return previewMovie;if(!libraryFilter.equals("All")||!libraryQuery.isEmpty())return movieCards.isEmpty()?null:movieCards.get(0).movie;return session.movie!=null?session.movie:movieCards.isEmpty()?null:movieCards.get(0).movie;}
+  void launchPreview(boolean fromStart){Movie m=displayedMovie();if(m==null)return;tvLibrary.remember(m);OfflineDownloads.get(this).visibility(false);if(session.movie==null||!session.movie.cacheIdentity().equals(m.cacheIdentity())){PlayerActivity.discardWarmPlayer();session.selectMovie(m);}if(fromStart)resetSavedPosition(m);BetaLog.event("play_pressed","mode="+(fromStart?"start":"continue")+" resumeMs="+(fromStart?0:m.savedPosition(this)));play(Collections.singletonList(m),0,fromStart);}
+  void updateShelf(){
+    if(movieRail==null)return;List<Movie> recent=tvLibrary.list(this,session.recentMovies,libraryFilter,libraryQuery,librarySort);
+    if(previewMovie!=null){Movie fresh=null;for(Movie m:recent)if(m.cacheIdentity().equals(previewMovie.cacheIdentity()))fresh=m;previewMovie=fresh;}
+    StringBuilder keys=new StringBuilder();for(Movie m:recent)keys.append(m.cacheIdentity()).append('|').append(m.fileId).append('|').append(m.title).append('|').append(m.artwork.hashCode()).append('|').append(m.artworkPath).append(';');String next=keys.toString();
+    if(!next.equals(shelfKey)){
+      String focused="";for(MovieCardView card:movieCards)if(card.hasFocus())focused=card.movie.cacheIdentity();movieRail.removeAllViews();movieCards.clear();shelfKey=next;
+      boolean compact=getResources().getDisplayMetrics().heightPixels/getResources().getDisplayMetrics().density<500;
+      for(Movie m:recent){MovieCardView card=new MovieCardView(this,m,compact);LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(Ui.dp(this,compact?76:96),-2);p.rightMargin=Ui.dp(this,10);movieRail.addView(card,p);movieCards.add(card);
+        card.setOnFocusChangeListener((v,f)->{card.highlight(f);if(f){previewMovie=card.movie;changed();focusHint.setText(card.getContentDescription());}});
+        card.setOnClickListener(v->{previewMovie=card.movie;launchPreview(false);});card.setOnLongClickListener(v->{movieOptions(card.movie);return true;});
+      }
+      for(int i=0;i<movieCards.size();i++){MovieCardView card=movieCards.get(i);card.setNextFocusLeftId(movieCards.get(Math.max(0,i-1)).getId());card.setNextFocusRightId(movieCards.get(Math.min(movieCards.size()-1,i+1)).getId());card.setNextFocusUpId(heroContinueButton.getId());card.setNextFocusDownId(card.getId());if(card.movie.cacheIdentity().equals(focused))card.requestFocus();}
+    }
+    for(MovieCardView card:movieCards)card.bind(card.movie);
+    boolean empty=movieCards.isEmpty();emptyLibrary.setVisibility(empty?View.VISIBLE:View.GONE);emptyLibrary.setText(!libraryQuery.isEmpty()?"No matches. Try a shorter title or choose All.":libraryFilter.equals("All")?"Your cinema starts here. Choose a channel in Settings, then refresh.":libraryFilter.equals("Continue")?"Nothing to resume yet. Start a video from All.":"No videos in "+libraryFilter+" yet. Hold OK on a video in All to add it.");
+    for(int i=0;i<filterButtons.size();i++){Button chip=filterButtons.get(i);styleFilter(chip,HOME_FILTERS[i]);chip.setNextFocusUpId(heroContinueButton.isEnabled()?heroContinueButton.getId():homeActions[2].getId());chip.setNextFocusDownId(!empty?movieCards.get(0).getId():chip.getId());chip.setNextFocusLeftId(filterButtons.get(Math.max(0,i-1)).getId());chip.setNextFocusRightId(filterButtons.get(Math.min(filterButtons.size()-1,i+1)).getId());}
+    if(moreButton!=null)moreButton.setNextFocusDownId(filterButtons.get(0).getId());shelfTitle.setText((libraryQuery.isEmpty()?libraryFilter:"Search: "+libraryQuery)+"   ·   "+recent.size()+" videos   ·   Hold OK for details");movieRail.setVisibility(empty?View.GONE:View.VISIBLE);
+    heroContinueButton.setNextFocusDownId(filterButtons.get(Math.max(0,Arrays.asList(HOME_FILTERS).indexOf(libraryFilter))).getId());stateAction.setNextFocusDownId(!empty?movieCards.get(0).getId():heroContinueButton.getId());
+  }
+
+  void artworkSource(){Movie m=displayedMovie();ArtworkStore.Entry entry=artworks.cached(m);if(entry==null){Ui.message(this,"Artwork","Online artwork uses promotional movie and series covers from Wikipedia and TVmaze. Episodes share the series cover and show their season/episode label. Missing covers use a title placeholder. Only the cleaned file title is searched.");return;}Ui.dialog(this).setTitle("Artwork · "+entry.source).setMessage(entry.kind+"\n"+entry.page+(entry.source.equals("TVmaze")?"\nTVmaze data · CC BY-SA":"\nImage credits and licence on the source page")).setPositiveButton("Open source",(d,w)->{try{startActivity(new Intent(Intent.ACTION_VIEW,android.net.Uri.parse(entry.page)));}catch(ActivityNotFoundException e){Toast.makeText(this,"Browser unavailable",Toast.LENGTH_SHORT).show();}}).setNegativeButton("Close",null).show();}
+  void settingsPopup(){
+    if(tvLibrary!=null){tvSettings();return;}
+    Ui.menu(this,"Settings",HOME_SETTINGS_ACTIONS,choice->{
+      switch(choice){
+        case 5:artworkSource();break;
+        case 4:if(updater!=null)updater.checkNow();break;
+        case 0:clearVideoCache();break;
+        case 1:BetaLog.start(this);Toast.makeText(this,"Log collection started",Toast.LENGTH_SHORT).show();break;
+        case 2:BetaLog.stop(this,true);break;
+        case 3:if(tg!=null&&tg.ready)channels();else authChanged(tg==null?"":tg.state);break;
+      }
+    });
+  }
+  void collections(){Ui.menu(this,"Your cinema",new String[]{"All","Movies","Series","Continue","Watch later","Watched","Favourites","Sort","Clear search"},n->{if(n<7)libraryFilter=new String[]{"All","Movies","Series","Continue","Watch later","Watched","Favourites"}[n];else if(n==7){Ui.menu(this,"Sort library",new String[]{"Newest","Title A–Z","Smallest first","Largest first"},x->{librarySort=x;shelfKey=null;changed();});return;}else libraryQuery="";previewMovie=null;shelfKey=null;changed();});}
+  void searchLibrary(){EditText input=Ui.input(this,"Search title, year, S01E02…",false);input.setText(libraryQuery);Ui.dialog(this).setTitle("Search your library").setView(input).setPositiveButton("Search",(d,w)->{libraryQuery=input.getText().toString();shelfKey=null;changed();}).setNeutralButton("Voice",(d,w)->{try{Intent voice=new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH);voice.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);startActivityForResult(voice,601);}catch(Exception e){Ui.message(this,"Voice search","No speech recognition app is available. Use text search.");}}).setNegativeButton("Cancel",null).show();}
+  protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request==601&&result==RESULT_OK&&data!=null){ArrayList<String> words=data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS);if(words!=null&&!words.isEmpty()){libraryQuery=words.get(0);shelfKey=null;changed();}}else if(request==602||request==603)TvBackup.result(this,request,result,data);}
+  void movieOptions(Movie movie){tvLibrary.remember(movie);Ui.menu(this,MediaTitle.parse(movie.title).display(),new String[]{"Play / continue","Play from start","Details","Watch later · "+tvLibrary.marked(movie,"later"),"Favourite · "+tvLibrary.marked(movie,"star"),"Watched · "+tvLibrary.marked(movie,"watched"),"Download for offline","Copy Telegram link"},n->{if(n<2){previewMovie=movie;launchPreview(n==1);}else if(n==2)Ui.message(this,"Video details",movie.details());else if(n<6){tvLibrary.toggle(movie,new String[]{"later","star","watched"}[n-3]);shelfKey=null;changed();}else if(n==6)OfflineDownloads.get(this).add(movie);else{String link=movie.chatId<0?"https://t.me/c/"+Long.toString(movie.chatId).replaceFirst("^-100","")+"/"+(movie.messageId/1048576):"";if(link.isEmpty()){Ui.message(this,"Link","A channel link is not available for this item.");return;}((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Video link",link));Toast.makeText(this,"Link copied",Toast.LENGTH_SHORT).show();}});}
+  void tvSettings(){Ui.menu(this,"Muthumol TV · 6.0 beta",new String[]{"Channel selection","Collections / sort","Offline downloads","Animation · "+(getSharedPreferences("tv-ui",0).getBoolean("motion",true)?"Rich":"Reduced"),"Autoplay next episode · "+getSharedPreferences("player",0).getBoolean("tvAutoplay",true),"Backup settings & history","Restore backup","Clear temporary cache","Start diagnostic log","Stop and send log","Check for update","Artwork credits"},n->{switch(n){case 0:if(tg.ready)channels();else authChanged(tg.state);break;case 1:collections();break;case 2:OfflineDownloads.get(this).show(this);break;case 3:SharedPreferences p=getSharedPreferences("tv-ui",0);p.edit().putBoolean("motion",!p.getBoolean("motion",true)).apply();home();break;case 4:SharedPreferences q=getSharedPreferences("player",0);q.edit().putBoolean("tvAutoplay",!q.getBoolean("tvAutoplay",true)).apply();break;case 5:TvBackup.export(this);break;case 6:TvBackup.restore(this);break;case 7:clearVideoCache();break;case 8:BetaLog.start(this);Toast.makeText(this,"Diagnostic log started",Toast.LENGTH_SHORT).show();break;case 9:BetaLog.stop(this,true);break;case 10:updater.checkNow();break;case 11:artworkSource();}});}
+  @Override public boolean dispatchKeyEvent(KeyEvent event){if(event.getAction()==KeyEvent.ACTION_DOWN&&event.getKeyCode()==KeyEvent.KEYCODE_MENU&&"home".equals(screen)){Movie selected=displayedMovie();if(selected!=null)movieOptions(selected);else tvSettings();return true;}return super.dispatchKeyEvent(event);}
+  void resetSavedPosition(Movie m){getSharedPreferences("player",0).edit().remove("pos:"+m.cacheIdentity()).remove("pos:"+m.uri).remove("pos:"+m.legacyUri()).apply();if(session!=null&&session.movie!=null&&session.movie.cacheIdentity().equals(m.cacheIdentity()))session.updatePosition(0);}
+  void channels(){screen="channels";page("Choose a channel");status.setText("Loading your joined Telegram channels…");action("Back to home",this::home);tg.send("LoadChats",x->tg.send("GetChats",result->runOnUiThread(()->{if(!screen.equals("channels"))return;Object raw=TelegramBridge.get(result,"chatIds");if(raw instanceof long[])for(long id:(long[])raw)tg.send("GetChat",chat->runOnUiThread(()->{if(!screen.equals("channels"))return;Object type=TelegramBridge.get(chat,"type");if(TelegramBridge.bool(type,"isChannel")){String label=TelegramBridge.str(chat,"title");action(label,()->{session.choose(id,label);home();});}}),"chatId",id);status.setText("Choose the channel that contains your movie and optional subtitle.");}),"chatList",null,"limit",100),"chatList",null,"limit",100);}
+  void clearVideoCache(){Ui.dialog(this).setTitle("Clear all movie data?").setMessage("Deletes movie cache, resume positions, saved movie details and per-movie settings. Movies start from the beginning. Telegram login and channel selection stay.").setPositiveButton("Clear",(d,w)->{PlayerActivity.discardWarmPlayer();session.clear();}).setNegativeButton("Cancel",null).show();}
+  static String size(long n){if(n<=0)return "Stream";if(n>=1024L*1024*1024)return String.format(Locale.US,"%.2f GB",n/(1024.0*1024*1024));return String.format(Locale.US,"%.0f MB",n/1048576.0);}
+  static String duration(long s){return s>=3600?String.format(Locale.US,"%d:%02d:%02d",s/3600,(s/60)%60,s%60):String.format(Locale.US,"%d:%02d",s/60,s%60);}
+  void play(List<Movie> list,int selected,boolean fromStart){JSONArray array=new JSONArray();for(Movie m:list)array.put(m.json());startActivity(new Intent(this,PlayerActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT).putExtra("movies",array.toString()).putExtra("index",selected).putExtra("startFromBeginning",fromStart));}
+  public void onBackPressed(){if(screen.equals("splash")){openHome();return;}if(!screen.equals("home"))home();else{PlayerActivity.discardWarmPlayer();session.pause();finishAffinity();}}
+
+  void configuration(){screen="config";page("Telegram setup");status.setText("One-time developer API setup from my.telegram.org. Stored encrypted on this TV. Login then uses your phone number and code.");EditText id=Ui.input(this,"API ID",false),hash=Ui.input(this,"API hash",true);id.setInputType(2);Ui.add(column,id);Ui.add(column,hash);action("Save securely",()->{try{tg.configure(id.getText().toString().trim(),hash.getText().toString().trim());authChanged(tg.state);}catch(Exception e){Ui.message(this,"Configuration",e.getMessage());}});action("Back to home",this::home);}
+
+  @Override public void authChanged(String state){
+    if(tg.ready){if(foreground)session.onVisible(this);if(!screen.equals("home"))home();return;}
+    if(state.equals("Unavailable")){Ui.message(this,"Telegram compatibility",tg.fatal);return;}
+    if(!tg.configured()){configuration();return;}
+    screen="auth";page("Telegram sign in");String hint;boolean secret=false;
+    if(state.equals("AuthorizationStateWaitOtherDeviceConfirmation")){showQr();return;}
+    switch(state){
+      case "AuthorizationStateWaitPhoneNumber":hint="Phone number with country code";status.setText("Example: +966…  •  Telegram may send the code to your Telegram app.");break;
+      case "AuthorizationStateWaitCode":hint="Telegram login code";status.setText("Enter the code sent by Telegram.");break;
+      case "AuthorizationStateWaitPassword":hint="Two-step verification password";secret=true;status.setText("Your Telegram account requires its 2-step verification password.");break;
+      case "AuthorizationStateWaitEmailAddress":hint="Email address";status.setText("Telegram is requesting your login email.");break;
+      case "AuthorizationStateWaitEmailCode":hint="Email verification code";status.setText("Enter the code Telegram sent to your email.");break;
+      default:status.setText("Waiting for Telegram… "+state.replace("AuthorizationState",""));action("Back to home",this::home);return;
+    }
+    if(state.equals("AuthorizationStateWaitPhoneNumber"))action("Sign in with QR code",()->tg.send("RequestQrCodeAuthentication",x->{},"otherUserIds",new long[0]));
+    EditText e=Ui.input(this,hint,secret);Ui.add(column,e);action("Continue",()->tg.login(e.getText().toString().trim()));action("Back to home",this::home);e.requestFocus();
+  }
+
+  void showQr(){status.setText("Telegram on your phone → Settings → Devices → Link Desktop Device");try{com.google.zxing.common.BitMatrix matrix=new com.google.zxing.qrcode.QRCodeWriter().encode(tg.qrLink,com.google.zxing.BarcodeFormat.QR_CODE,400,400);Bitmap bitmap=Bitmap.createBitmap(400,400,Bitmap.Config.ARGB_8888);int[] pixels=new int[160000];for(int y=0;y<400;y++)for(int x=0;x<400;x++)pixels[y*400+x]=matrix.get(x,y)?Color.BLACK:Color.WHITE;bitmap.setPixels(pixels,0,400,0,0,400,400);ImageView qr=new ImageView(this);qr.setImageBitmap(bitmap);column.addView(qr,new LinearLayout.LayoutParams(Ui.dp(this,240),Ui.dp(this,240)));}catch(Exception e){Ui.add(column,Ui.text(this,"QR code is not ready. Try again.",16,Color.WHITE));}action("Use phone number",()->authChanged("AuthorizationStateWaitPhoneNumber"));}
+  @Override public void error(String s){runOnUiThread(()->Ui.message(this,"Telegram",s));}
+}

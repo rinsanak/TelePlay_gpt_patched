@@ -1,0 +1,27 @@
+{
+  "tests": {
+    "tests": 147,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 4
+  },
+  "passed": 143,
+  "lint": {
+    "Warning": 75
+  },
+  "changed_existing_files": [
+    "app/src/main/java/com/muthumol/player/dummy/MainActivity.java",
+    "app/src/main/java/com/muthumol/player/dummy/PosterArtView.java",
+    "app/src/main/java/com/muthumol/player/dummy/TvLibrary.java",
+    "app/src/test/java/com/muthumol/player/dummy/PlayerApi25Test.java"
+  ],
+  "native_libraries": [
+    "lib/armeabi-v7a/libffmpegJNI.so",
+    "lib/armeabi-v7a/libtdjni.so"
+  ],
+  "player_source_unchanged": true,
+  "apk_signed": false,
+  "apk_sha256": "bf42733fd680c3781c18cfc1ca33602c647b343aba262e885ab6cc2e4fc11eb4",
+  "versionCode": 61,
+  "versionName": "6.0-beta2"
+}
