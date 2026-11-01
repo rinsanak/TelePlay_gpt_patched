@@ -15,3 +15,6 @@ The user wants every app update available both as an APK and through the install
 - Home groups shows such as LOST into one card. Opening a show selects a season, then an episode; preserve this hierarchy in future updates.
 
 - Public app name is TG stream. Support phone touch and portrait browsing as well as TV remote/landscape use. Keep the existing applicationId and persistent certificate to preserve installed-update compatibility. Target SDK is now 35; guard modern Android permission/receiver behavior while retaining minSdk 25.
+
+
+- Original V5.6 key recovered on 2026-11-01 from private Drive TelePlay Projector App/build-signing/debug.keystore. Verified PrivateKeyEntry alias androiddebugkey, SHA256 26e7b63fcdd306fe3f52a0172a3180160c0aee359a6c00f933ded41e8c0b8318. Protected local copy /workspace/private-signing-original/debug.keystore. This supersedes the replacement-key migration above: user explicitly refuses uninstall. Keep original identity. Never regenerate or publish the private key. Workflow can prepare a configured unsigned APK, then publish an externally signed original-key APK after all publisher checks.

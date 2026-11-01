@@ -4,6 +4,15 @@ on:
     branches: [main]
     paths: ['muthumol-tv/**', '.github/workflows/muthumol-release.yml']
   workflow_dispatch:
+    inputs:
+      signed_apk_url:
+        description: 'Optional HTTPS URL of the APK signed with the original recovered key'
+        type: string
+        default: ''
+      signed_apk_sha256:
+        description: 'SHA256 of that signed APK'
+        type: string
+        default: ''
 permissions:
   contents: write
 concurrency:
@@ -17,27 +26,19 @@ jobs:
       TG_API_HASH: ${{ secrets.TG_API_HASH }}
       MUTHUMOL_STORE_PASSWORD: ${{ secrets.MUTHUMOL_STORE_PASSWORD }}
       MUTHUMOL_KEY_PASSWORD: ${{ secrets.MUTHUMOL_KEY_PASSWORD }}
-      MUTHUMOL_KEY_ALIAS: muthumol-release
+      MUTHUMOL_KEY_ALIAS: androiddebugkey
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Check signing prerequisite
-        env:
-          SIGNING_KEY: ${{ secrets.MUTHUMOL_KEYSTORE_BASE64 }}
+      - name: Check Telegram configuration
         run: |
-          set -euo pipefail
-          if [ -z "$SIGNING_KEY" ]; then
-            echo '::error::Signing key missing. Open muthumol-tv/tools/signing-setup.html to prepare the three signing secrets.'
-            exit 1
-          fi
-          if [ -z "$TG_API_ID" ] || [ -z "$TG_API_HASH" ] || [ -z "$MUTHUMOL_STORE_PASSWORD" ] || [ -z "$MUTHUMOL_KEY_PASSWORD" ]; then
-            echo '::error::Configure TG_API_ID, TG_API_HASH and the signing passwords in Actions secrets. End users will only see phone/QR login.'
-            exit 1
-          fi
-          umask 077
-          printf '%s' "$SIGNING_KEY" | base64 --decode > "$RUNNER_TEMP/muthumol.keystore"
-          echo "MUTHUMOL_SIGNING_KEY=$RUNNER_TEMP/muthumol.keystore" >> "$GITHUB_ENV"
+          python3 - <<'CHECK'
+          import os, re
+          assert re.fullmatch(r'[1-9][0-9]*', os.getenv('TG_API_ID', '')), 'TG_API_ID missing or invalid'
+          assert re.fullmatch(r'[a-fA-F0-9]{32}', os.getenv('TG_API_HASH', '')), 'TG_API_HASH missing or invalid'
+          print('Telegram build configuration present')
+          CHECK
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -59,15 +60,58 @@ jobs:
           path: |
             muthumol-tv/app/build/reports/
             muthumol-tv/app/build/test-results/
+      - name: Retain configured APK for original-key signing
+        uses: actions/upload-artifact@v4
+        with:
+          name: TG-stream-original-key-signing-input
+          path: muthumol-tv/app/build/outputs/apk/release/app-release-unsigned.apk
+      - name: Select original signing route
+        id: signing
+        env:
+          SIGNING_KEY: ${{ secrets.MUTHUMOL_KEYSTORE_BASE64 }}
+          SIGNED_APK_URL: ${{ inputs.signed_apk_url }}
+          SIGNED_APK_SHA256: ${{ inputs.signed_apk_sha256 }}
+        run: |
+          set -euo pipefail
+          if [ -n "$SIGNED_APK_URL" ]; then
+            python3 - <<'DOWNLOAD'
+          import os, re, hashlib, urllib.request, urllib.parse
+          from pathlib import Path
+          url = os.environ['SIGNED_APK_URL']
+          parsed = urllib.parse.urlparse(url)
+          assert parsed.scheme == 'https' and parsed.hostname and (parsed.hostname.endswith('.blob.core.windows.net') or parsed.hostname.endswith('.oaiusercontent.com')), 'Unsupported artifact host'
+          digest = os.environ['SIGNED_APK_SHA256']
+          assert re.fullmatch(r'[a-f0-9]{64}', digest), 'Invalid APK checksum'
+          try:
+              with urllib.request.urlopen(url, timeout=120) as response:
+                  data = response.read(100 * 1024 * 1024)
+          except Exception:
+              raise SystemExit('Unable to download signed APK; refresh the artifact URL') from None
+          assert hashlib.sha256(data).hexdigest() == digest, 'Signed APK checksum mismatch'
+          Path('muthumol-tv/app/build/outputs/apk/release/app-release.apk').write_bytes(data)
+          DOWNLOAD
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+            echo 'external=true' >> "$GITHUB_OUTPUT"
+          elif [ -n "$SIGNING_KEY" ] && [ -n "$MUTHUMOL_STORE_PASSWORD" ] && [ -n "$MUTHUMOL_KEY_PASSWORD" ]; then
+            umask 077
+            printf '%s' "$SIGNING_KEY" | base64 --decode > "$RUNNER_TEMP/muthumol.keystore"
+            echo "MUTHUMOL_SIGNING_KEY=$RUNNER_TEMP/muthumol.keystore" >> "$GITHUB_ENV"
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'Configured unsigned APK is ready for signing with the recovered original key. The feed has not changed.' >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Build signed release
+        if: steps.signing.outputs.ready == 'true' && steps.signing.outputs.external != 'true'
         working-directory: muthumol-tv
         run: bash gradlew --no-daemon --max-workers=2 :app:assembleRelease
       - name: Stage verified update
+        if: steps.signing.outputs.ready == 'true'
         run: |
           set -euo pipefail
           python3 muthumol-tv/tools/publish-update.py stage "$RUNNER_TEMP/update"
           git archive --format=zip --output="$RUNNER_TEMP/update/source.zip" HEAD muthumol-tv .github/workflows/muthumol-release.yml RELEASE_UPDATES.md
       - name: Retain release files and test reports
+        if: steps.signing.outputs.ready == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: TG-stream-update
@@ -76,6 +120,7 @@ jobs:
             muthumol-tv/app/build/reports/
             muthumol-tv/app/build/test-results/
       - name: Publish APK, source and updater manifest together
+        if: steps.signing.outputs.ready == 'true'
         run: |
           set -euo pipefail
           cp muthumol-tv/tools/publish-update.py "$RUNNER_TEMP/publish-update.py"

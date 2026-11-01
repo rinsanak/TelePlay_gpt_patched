@@ -9,7 +9,7 @@ import subprocess
 import sys
 import xml.etree.ElementTree as ET
 
-CERT = '70db42e5a1ee6f2fe4e9b5b63ac6a90360e89466d9a1bb1ee5147a57d0316460'
+CERT = '26e7b63fcdd306fe3f52a0172a3180160c0aee359a6c00f933ded41e8c0b8318'
 PACKAGE = 'com.muthumol.player.dummy'
 BASE = 'https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/'
 
@@ -51,7 +51,7 @@ def stage(destination):
     shutil.copy2(apk, destination / name)
     manifest = dict(versionCode=code, versionName=version, url=BASE + 'apks/' + name,
                     sha256=hashlib.sha256(apk.read_bytes()).hexdigest(),
-                    notes='TMPlayer-style charcoal and blue Home, account-wide video/document search including archived chats, paginated chat poster grids, Continue watching and series/season/episode browsing. Phone touch and TV remote layouts with Android target 35. Signing identity changes from V5.6: uninstall old app once, install this version, then future updates use this key. Existing subtitles retained. No Cast.')
+                    notes='TMPlayer-style charcoal and blue Home, account-wide video/document search including archived chats, paginated chat poster grids, Continue watching and series/season/episode browsing. Phone touch and TV remote layouts with Android target 35. Uses the original V5.6 signing identity; update without uninstall. Existing subtitles retained. No Cast.')
     (destination / 'latest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     print(f'Verified signed {version} ({code}); staged APK and manifest')
 
