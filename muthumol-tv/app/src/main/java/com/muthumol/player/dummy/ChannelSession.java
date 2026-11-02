@@ -22,6 +22,7 @@ final class ChannelSession {
   volatile List<Movie> recentMovies=Collections.emptyList();private Map<String,Object> recentSubtitles=Collections.emptyMap();
   volatile Movie movie;volatile ReadAheadStore store;volatile MovieIndex index;
   volatile String note="Choose a channel in Settings",subtitlePath="",subtitleType="",subtitleName="";
+  volatile String subtitleStatus="";final AutoSubtitles autoSubtitles=new AutoSubtitles(this);
   volatile int subtitleId;volatile long channelId;volatile boolean visible=true;volatile boolean playbackVisible;
   private volatile boolean refreshing,clearing;private String preparedIdentity="";private int preparedFileId;private volatile int epoch;private long playbackMs;
   final Runnable poll=()->{refreshIfIdle();};
@@ -87,17 +88,17 @@ final class ChannelSession {
     // Refresh the shelf without replacing an already selected/playing movie.
     Movie selected=movie;if(selected==null){if(scan.movie!=null)selectMovie(scan.movie);else note="No supported videos in recent channel history";return;}
     for(Movie fresh:recentMovies)if(fresh.cacheIdentity().equals(selected.cacheIdentity())){if(fresh.fileId==selected.fileId){movie=fresh;prefs.edit().putString("movie",fresh.json().toString()).apply();}break;}
-    Object sub=recentSubtitles.get(movie.cacheIdentity());if(visible&&sub!=null)downloadSubtitle(sub,movie.cacheIdentity());
+    if(visible)autoSubtitles.find(movie);
     note=recentMovies.isEmpty()?"No recent videos • selected movie kept":"Latest "+recentMovies.size()+" videos ready";
   }
   void selectMovie(Movie selected){
     if(clearing||selected==null)return;
     Movie old=movie;boolean changed=old==null||!old.cacheIdentity().equals(selected.cacheIdentity())||old.fileId!=selected.fileId;
-    if(!changed){movie=selected;prepare(selected);return;}
+    if(!changed){movie=selected;prepare(selected);autoSubtitles.find(selected);return;}
     movie=selected;epoch++;int generation=epoch;subtitleId=0;subtitlePath="";subtitleType="";subtitleName="";
     prefs.edit().putString("movie",selected.json().toString()).remove("subtitleId").remove("subtitlePath").remove("subtitleType").remove("subtitleName").apply();note="Selected movie preparing";
     tasks.execute(()->{synchronized(ChannelSession.this){if(generation!=epoch||clearing)return;if(!cacheMatches(selected))closeStore();MediaCache.activate(MediaCache.key(selected.cacheIdentity()));MediaCache.keepOnly(MediaCache.root(context),MediaCache.key(selected.cacheIdentity()));if(visible&&tg.ready)prepareNow(selected);}});
-    Object subtitle=recentSubtitles.get(selected.cacheIdentity());if(visible&&subtitle!=null)downloadSubtitle(subtitle,selected.cacheIdentity());notifyChanged();
+    if(visible)autoSubtitles.find(selected);notifyChanged();
   }
   void prepare(Movie m){if(m.fileId<=0)return;if(clearing||!visible||!tg.ready)return;tasks.execute(()->{if(!clearing&&visible&&movie!=null&&movie.cacheIdentity().equals(m.cacheIdentity())&&(!cacheMatches(m)||store==null||store.failed())){if(store!=null)closeStore();prepareNow(m);}});}
   synchronized void prepareNow(Movie m){if(m.fileId<=0){note="Offline video ready";return;}BetaLog.event("session_prepare","bytes="+m.size+" resumeMs="+m.savedPosition(context));if(store!=null&&cacheMatches(m)&&!store.failed())return;if(store!=null)closeStore();try{if(clearing||movie==null||!movie.cacheIdentity().equals(m.cacheIdentity()))return;if(m.size<=0){note="Waiting for movie size";return;}long budget=TelegramDataSource.budget(context);stats.diskBudget=Math.max(2L*ReadAheadStore.BLOCK,budget/2);stats.mediaBits=m.duration>0?m.size*8/m.duration:6000000;MediaCache.migrate(context,m);File dir=MediaCache.directory(context,m.cacheIdentity());dir.mkdirs();preparedIdentity=m.cacheIdentity();index=new MovieIndex(dir,m.size);playbackMs=m.savedPosition(context);long start=index.byteAt(playbackMs*1000,false);if(start<0)start=0;preparedFileId=m.fileId;stats.beginFile(m.fileId,tg.cachedBytes(m.fileId));tg.streamObservers.put(m.fileId,stats);store=new ReadAheadStore(dir,m.size,start,stats::preloadTargetBytes,stats::cacheBudgetBytes,stats::playbackBytePosition,new TelegramRangeLoader(tg,m.fileId,m.size,stats),true);stats.cache=store;store.warmRange(0,ReadAheadStore.HEADER_BYTES);// Tail/index bytes are fetched only if the extractor requests them.

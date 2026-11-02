@@ -38,6 +38,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
   static void discardWarmPlayer(){PlayerActivity p=warm.get();if(p!=null&&!p.foreground){p.release();p.stopped=true;p.resumePosition=0;p.resumePlaying=true;p.subtitleUri=null;p.subtitleMime=null;p.appliedAutoSubtitle="";}warm.clear();}
   int uiColor=Ui.MENU_COLORS[0];
   final Handler ui = new Handler(Looper.getMainLooper());
+  TelegramLibrary episodeLibrary;PlayerGestures gestures;
   final ArrayList<Movie> items = new ArrayList<>();
   int index, boost = 100, fontSize = 24;
   boolean hwPlus, showInfo;
@@ -122,10 +123,11 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
       String sub=b.getString("subtitle");
       if(sub!=null) { subtitleUri=Uri.parse(sub);subtitleMime=b.getString("subtitleMime"); }
     }
-    tvTools=new TvPlayerTools(this);
+    tvTools=new TvPlayerTools(this);loadEpisodeQueue();
     start();
   }
 
+  void loadEpisodeQueue(){if(episodeLibrary!=null)episodeLibrary.close();if(!tg.ready||!MediaTitle.parse(movie().title).episodic())return;Movie selected=movie();episodeLibrary=new TelegramLibrary(this,tg);episodeLibrary.listener=()->{Movie current=movie();List<Movie> queue=TvLibrary.episodes(TelegramLibrary.merge(episodeLibrary.items(),items),current);int at=-1;for(int i=0;i<queue.size();i++)if(queue.get(i).cacheIdentity().equals(current.cacheIdentity()))at=i;if(at>=0){items.clear();items.addAll(queue);index=at;}if(!episodeLibrary.loading&&episodeLibrary.error.isEmpty()&&episodeLibrary.hasMore())episodeLibrary.loadMore();};episodeLibrary.browse(0,MediaTitle.normalize(MediaTitle.parse(selected.title).name));}
   String positionKey() {
     return "pos:" + movie().cacheIdentity();
   }
@@ -173,6 +175,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
     title.setEllipsize(android.text.TextUtils.TruncateAt.END);
     title.setContentDescription("Now playing: "+movie().title);
     top.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+    if(MediaTitle.parse(movie().title).episodic()){addTop("|◀","Previous episode",()->tvTools.neighbour(-1));addTop("▶|","Next episode",()->tvTools.neighbour(1));}
     addTop("CC", "Subtitles", this::subtitleMenu);
     addTop("♫", "Audio and dialogue", () -> tvTools.audioMenu());
     addTop("⋮", "More playback options", () -> tvTools.menu());
@@ -459,13 +462,13 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
   }
 
   void subtitleMenu() {
-    choose("Subtitles", new String[]{"Tracks / Off", "Open subtitle file", "Find in Telegram", "Timing: " + subtitleDelayMs + " ms", "Appearance", "Position up / down"}, n -> {
+    choose("Subtitles", new String[]{"Tracks / Off", "Open subtitle file", "Find in Telegram", "Timing: " + subtitleDelayMs + " ms", "Appearance", "Position up / down","Automatic subtitle status / retry","Open MSone"}, n -> {
       if(n == 0) tracks(C.TRACK_TYPE_TEXT);
       else if(n == 1) importSubtitle();
       else if(n == 2) telegramSubtitles();
       else if(n == 3) subtitleSync();
       else if(n == 4) subtitleStyle();
-      else subtitlePosition();
+      else if(n==5)subtitlePosition();else if(n==6){session.autoSubtitles.selected="";session.autoSubtitles.find(movie());Ui.message(this,"Automatic subtitles",session.subtitleStatus);}else try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("https://malayalamsubtitles.org/?s="+Uri.encode(MediaTitle.parse(movie().title).name))));}catch(Exception e){Ui.message(this,"MSone","Browser unavailable");}
     });
   }
 
@@ -1032,7 +1035,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
     long position = player.getCurrentPosition(), duration = player.getDuration();
     if (duration > 0 && duration - position < 10000) position = 0;
     new TvLibrary(this).remember(movie());
-    SharedPreferences.Editor saved=prefs.edit().putLong(positionKey(),position);if(duration>0)saved.putLong("duration:"+movie().cacheIdentity(),duration);saved.apply();
+    SharedPreferences.Editor saved=prefs.edit().putLong(positionKey(),position);if(duration>0)saved.putLong("duration:"+movie().cacheIdentity(),duration);saved.apply();WatchSync.get(this).record(movie(),position,duration,duration>0&&player.getCurrentPosition()>=duration-10000?Boolean.TRUE:null);
   }
 
   void release() {
@@ -1054,6 +1057,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
 
   @Override
   protected void onStop() {
+    ui.postDelayed(()->WatchSync.get(this).sync(null,true),250);
     BetaLog.event("player_stop","warmRetained="+(player!=null&&!isFinishing()));
     if(Build.VERSION.SDK_INT>=26&&isInPictureInPictureMode()){super.onStop();return;}
     if(tvTools!=null)tvTools.hidden();
@@ -1102,7 +1106,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
       boolean forceStart=intent.getBooleanExtra("startFromBeginning",false);
       boolean rebuild=!same||player==null||forceStart;
       if(rebuild)release();
-      items.clear();items.addAll(next);index=selected;
+      items.clear();items.addAll(next);index=selected;loadEpisodeQueue();
       if(rebuild){streamStats=session.movie!=null&&session.movie.cacheIdentity().equals(movie().cacheIdentity())?session.stats:new StreamStats();subtitleUri=null;subtitleMime=null;appliedAutoSubtitle="";autoSubtitleBeforeStart();resumePosition=forceStart?0:movie().savedPosition(this);resumePlaying=true;restoreMovieSettings();start();}
     }catch(Exception e){Ui.message(this,"Video",e.getMessage());}
   }
@@ -1115,6 +1119,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
 
   @Override
   protected void onDestroy() {
+    if(episodeLibrary!=null)episodeLibrary.close();
     if(tvTools!=null)tvTools.close();
     bluetooth.stop();session.remove(this);session.onHidden(this);
     release();
@@ -1143,7 +1148,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
     if(mouse||action!=android.view.MotionEvent.ACTION_MOVE)BetaLog.event("pointer_input","type="+type+" action="+act+" source="+event.getSource()+" buttons="+event.getButtonState()+" playerState="+(player==null?-1:player.getPlaybackState())+" playing="+(player!=null&&player.isPlaying())+" positionMs="+(player==null?-1:player.getCurrentPosition())+" bufferedMs="+(player==null?-1:player.getTotalBufferedDuration()));
   }
   @Override public boolean dispatchTouchEvent(android.view.MotionEvent event){
-    logPointerEvent(event);int action=event.getActionMasked();
+    logPointerEvent(event);int action=event.getActionMasked();if(gestures==null)gestures=new PlayerGestures(this);if(gestures.touch(event)){controlsTouchActive=false;armControlsHide();return true;}
     if(player!=null&&action==android.view.MotionEvent.ACTION_DOWN){controlsTouchActive=true;ui.removeCallbacks(hideControls);view.showController();}
     boolean handled=super.dispatchTouchEvent(event);
     if(player!=null&&(action==android.view.MotionEvent.ACTION_UP||action==android.view.MotionEvent.ACTION_CANCEL)){controlsTouchActive=false;armControlsHide();}

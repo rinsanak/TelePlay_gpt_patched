@@ -51,8 +51,8 @@ public class HomeRedesignTest {
       a.session.movie=m; a.session.recentMovies=Collections.singletonList(m); a.home();
       a.libraryQuery="no match"; a.selectHomeFilter("Movies");
       assertEquals("",a.libraryQuery); assertEquals(1,a.movieCards.size());
-      assertTrue(a.filterButtons.get(2).isSelected());
-      assertEquals(a.filterButtons.get(2).getId(),a.heroContinueButton.getNextFocusDownId());
+      assertTrue(a.filterButtons.get(1).isSelected());
+      assertEquals(a.filterButtons.get(1).getId(),a.heroContinueButton.getNextFocusDownId());
       assertEquals(a.moreButton.getId(),a.heroContinueButton.getNextFocusRightId());
       assertEquals(a.heroContinueButton.getId(),a.moreButton.getNextFocusLeftId());
       assertEquals("Search",a.homeActions[2].getText().toString());

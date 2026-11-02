@@ -10,11 +10,10 @@ final class TmHome {
     boolean phone=a.phoneLayout(),compact=!phone&&a.getResources().getDisplayMetrics().heightPixels/a.getResources().getDisplayMetrics().density<500;
     a.screen="home";a.uiColor=TmStyle.ACCENT;
     a.homeRoot=new FrameLayout(a);a.homeRoot.setBackgroundColor(TmStyle.BACKGROUND);
-    LinearLayout frame=new LinearLayout(a);frame.setOrientation(phone?LinearLayout.VERTICAL:LinearLayout.HORIZONTAL);a.homeRoot.addView(frame,new FrameLayout.LayoutParams(-1,-1));
+    LinearLayout frame=new LinearLayout(a);frame.setOrientation(LinearLayout.VERTICAL);a.homeRoot.addView(frame,new FrameLayout.LayoutParams(-1,-1));
     LinearLayout rail=new LinearLayout(a);rail.setOrientation(phone?LinearLayout.HORIZONTAL:LinearLayout.VERTICAL);rail.setGravity(Gravity.CENTER_HORIZONTAL);rail.setPadding(Ui.dp(a,8),Ui.dp(a,phone?8:16),Ui.dp(a,8),Ui.dp(a,8));rail.setBackgroundColor(TmStyle.SURFACE);
     HorizontalScrollView phoneRail=new HorizontalScrollView(a);
-    if(phone){phoneRail.setHorizontalScrollBarEnabled(false);phoneRail.addView(rail);frame.addView(phoneRail,new LinearLayout.LayoutParams(-1,Ui.dp(a,64)));}
-    else frame.addView(rail,new LinearLayout.LayoutParams(Ui.dp(a,92),-1));
+    phoneRail.setHorizontalScrollBarEnabled(false);phoneRail.addView(rail);frame.addView(phoneRail,new LinearLayout.LayoutParams(-1,Ui.dp(a,58)));rail.setOrientation(LinearLayout.HORIZONTAL);
     a.playFromStartButton=Ui.button(a,"Start over",()->a.launchPreview(true));a.continueButton=Ui.button(a,"Continue",()->a.launchPreview(false));
     a.playFromStartButton.setContentDescription("Play from start");a.continueButton.setContentDescription("Continue");
     Button home=nav(a,"⌂","Home",()->{a.browseChat=0;a.libraryQuery="";a.libraryFilter="All";a.previewMovie=null;if(a.tg.ready)a.accountLibrary.browse(0,"");a.home();});
@@ -26,11 +25,9 @@ final class TmHome {
     search.setContentDescription("Search library");refresh.setContentDescription("Refresh latest videos");chats.setContentDescription("Browse chats");
     a.homeActions=new Button[]{a.playFromStartButton,a.continueButton,search,chats,downloads,refresh,settings};a.continueButton.setNextFocusRightId(search.getId());a.playFromStartButton.setLayoutParams(new LinearLayout.LayoutParams(-2,Ui.dp(a,36)));
     for(Button b:a.homeActions){if(b.getId()==View.NO_ID)b.setId(View.generateViewId());}
-    if(!phone){TextView brand=Ui.text(a,"TG\nstream",16,TmStyle.ACCENT);brand.setGravity(Gravity.CENTER);brand.setTypeface(Typeface.DEFAULT_BOLD);rail.addView(brand,new LinearLayout.LayoutParams(-1,Ui.dp(a,64)));}
-    for(Button button:new Button[]{home,search,chats,resume,favourites,downloads,settings}){
-      LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(phone?Ui.dp(a,86):-1,Ui.dp(a,phone?48:compact?40:48));p.bottomMargin=Ui.dp(a,6);rail.addView(button,p);
-    }
-    ScrollView scroll=new ScrollView(a);scroll.setFillViewport(true);scroll.setClipToPadding(false);frame.addView(scroll,new LinearLayout.LayoutParams(phone?-1:0,phone?0:-1,1));
+    TextView brand=Ui.text(a,"TG stream",18,TmStyle.ACCENT);brand.setTypeface(Typeface.DEFAULT_BOLD);brand.setGravity(Gravity.CENTER);rail.addView(brand,new LinearLayout.LayoutParams(Ui.dp(a,110),Ui.dp(a,48)));
+    for(Button button:new Button[]{home,search,refresh,settings})rail.addView(button,new LinearLayout.LayoutParams(Ui.dp(a,80),Ui.dp(a,48)));
+    ScrollView scroll=new ScrollView(a);scroll.setFillViewport(true);scroll.setClipToPadding(false);frame.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
     a.column=new LinearLayout(a);a.column.setOrientation(LinearLayout.VERTICAL);a.column.setPadding(Ui.dp(a,phone?12:16),Ui.dp(a,compact?8:12),Ui.dp(a,phone?12:16),Ui.dp(a,12));scroll.addView(a.column);
     FrameLayout hero=new FrameLayout(a);a.poster=new PosterArtView(a);a.poster.cinematic=true;hero.addView(a.poster,new FrameLayout.LayoutParams(-1,-1));a.column.addView(hero,new LinearLayout.LayoutParams(-1,Ui.dp(a,phone?310:compact?168:232)));
     a.heroPanel=new LinearLayout(a);a.heroPanel.setOrientation(LinearLayout.VERTICAL);a.heroPanel.setPadding(Ui.dp(a,16),Ui.dp(a,compact?4:14),Ui.dp(a,12),Ui.dp(a,4));
@@ -53,8 +50,8 @@ final class TmHome {
     HorizontalScrollView shelf=new HorizontalScrollView(a);shelf.setTag("bottom-library");shelf.setHorizontalScrollBarEnabled(false);shelf.setClipChildren(false);a.movieRail=new LinearLayout(a);a.movieRail.setClipChildren(false);shelf.addView(a.movieRail);a.libraryDock.addView(shelf);a.movieCards.clear();a.shelfKey=null;
     a.libraryLoad=Ui.button(a,"Load more videos",()->a.accountLibrary.loadMore());a.libraryLoad.setId(View.generateViewId());a.libraryLoad.setTextSize(12);a.libraryLoad.setMinHeight(0);a.libraryLoad.setMinimumHeight(0);a.libraryDock.addView(a.libraryLoad,new LinearLayout.LayoutParams(-2,Ui.dp(a,phone?48:32)));
     a.focusHint=label(a,"",10,TmStyle.MUTED);a.focusHint.setMaxLines(1);a.libraryDock.addView(a.focusHint);a.artCredit=new TextView(a);a.artCredit.setVisibility(View.GONE);a.previewIdentity="";
-    a.extraShelves=new LinearLayout(a);a.extraShelves.setOrientation(LinearLayout.VERTICAL);a.column.addView(a.extraShelves);a.extraShelfKey="";
-    a.setContentView(a.homeRoot);a.changed();if(a.displayedMovie()!=null)a.heroContinueButton.requestFocus();else chats.requestFocus();TvMotion.enter(a.heroPanel,0);TvMotion.enter(a.libraryDock,90);a.startHomeTick();
+    a.extraShelves=new LinearLayout(a);a.extraShelves.setOrientation(LinearLayout.VERTICAL);a.column.addView(a.extraShelves,1);a.extraShelfKey="";
+    a.setContentView(a.homeRoot);a.changed();if(a.displayedMovie()!=null)a.heroContinueButton.requestFocus();else search.requestFocus();TvMotion.enter(a.heroPanel,0);TvMotion.enter(a.libraryDock,90);a.startHomeTick();
   }
   static Button nav(MainActivity a,String symbol,String title,Runnable action){Button b=Ui.button(a,title,action);b.setId(View.generateViewId());b.setContentDescription(title);b.setTextSize(11);b.setMinWidth(0);b.setMinimumWidth(0);b.setMinHeight(0);b.setMinimumHeight(0);b.setPadding(Ui.dp(a,5),0,Ui.dp(a,5),0);b.setBackground(TmStyle.pill(a,false,false));b.setOnFocusChangeListener((v,f)->{b.setBackground(TmStyle.pill(a,f,false));b.setTextColor(f?TmStyle.ON_ACCENT:TmStyle.MUTED);});return b;}
   static TextView label(MainActivity a,String text,int size,int color){TextView v=Ui.text(a,text,size,color);v.setPadding(0,Ui.dp(a,2),0,Ui.dp(a,2));return v;}
