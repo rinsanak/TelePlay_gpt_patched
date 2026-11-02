@@ -68,16 +68,21 @@ jobs:
           import os, re, json, base64, hashlib, urllib.request
           from pathlib import Path
           candidate = json.loads(Path('muthumol-tv/release-candidate.json').read_text())
-          blob = candidate['blob_sha']
+          blobs = candidate.get('blob_shas', [candidate.get('blob_sha', '')])
           digest = candidate['sha256']
-          assert re.fullmatch(r'[a-f0-9]{40}', blob), 'Invalid candidate blob'
+          assert isinstance(blobs, list) and 1 <= len(blobs) <= 32, 'Invalid candidate blobs'
+          assert all(re.fullmatch(r'[a-f0-9]{40}', blob) for blob in blobs), 'Invalid candidate blob'
           assert re.fullmatch(r'[a-f0-9]{64}', digest), 'Invalid APK checksum'
-          url = 'https://api.github.com/repos/rinsanak/TelePlay_gpt_patched/git/blobs/' + blob
-          request = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + os.environ['GITHUB_TOKEN'], 'Accept': 'application/vnd.github+json'})
-          with urllib.request.urlopen(request, timeout=120) as response:
-              record = json.load(response)
-          assert record['encoding'] == 'base64', 'Unexpected blob encoding'
-          data = base64.b64decode(record['content'])
+          data = bytearray()
+          for blob in blobs:
+              url = 'https://api.github.com/repos/rinsanak/TelePlay_gpt_patched/git/blobs/' + blob
+              request = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + os.environ['GITHUB_TOKEN'], 'Accept': 'application/vnd.github+json'})
+              with urllib.request.urlopen(request, timeout=120) as response:
+                  record = json.load(response)
+              assert record['encoding'] == 'base64', 'Unexpected blob encoding'
+              data.extend(base64.b64decode(record['content']))
+          if 'size' in candidate:
+              assert len(data) == candidate['size'], 'Signed APK size mismatch'
           assert hashlib.sha256(data).hexdigest() == digest, 'Signed APK checksum mismatch'
           Path('muthumol-tv/app/build/outputs/apk/release/app-release.apk').write_bytes(data)
           DOWNLOAD
