@@ -96,4 +96,10 @@ public class TelegramLibraryTest {
       activity.onBackPressed();assertEquals("videos",activity.screen);assertEquals(-100,activity.browseChat);
     }finally{controller.destroy();}
   }
+  @Test public void openingSeriesAutomaticallyDrainsEveryPageWithoutLoadMore()throws Exception{
+    org.robolectric.android.controller.ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).create();MainActivity activity=controller.get();
+    try{activity.accountLibrary.close();List<String> pages=new ArrayList<>();library=new TelegramLibrary(RuntimeEnvironment.getApplication(),(name,args)->{if(name.equals("GetChat"))return chat(-100);String filter=TelegramBridge.type(field(args,"filter"));if(filter.equals("SearchMessagesFilterDocument"))return new TdApi.FoundMessages(0,new TdApi.Message[0],"");String offset=(String)field(args,"offset");pages.add(offset);int page=offset.isEmpty()?0:Integer.parseInt(offset);List<TdApi.Message> found=new ArrayList<>();for(int i=page*40+1;i<=Math.min(117,(page+1)*40);i++){TdApi.Message message=video(-100,i);((TdApi.MessageVideo)message.content).video.fileName=String.format(Locale.US,"Lost.S01E%03d.1080p.mkv",i);found.add(message);}return new TdApi.FoundMessages(117,found.toArray(new TdApi.Message[0]),page<2?""+(page+1):"");});activity.accountLibrary=library;Movie selected=Movie.fromMessage(video(-100,1),-100);selected.title="Lost.S01E001.mkv";activity.openSeries(selected);for(int i=0;i<5;i++){activity.seriesLibrary.worker.submit(()->{}).get(5,TimeUnit.SECONDS);ShadowLooper.idleMainLooper();}assertEquals(Arrays.asList("","1","2"),pages);assertFalse(activity.seriesLibrary.hasMore());assertEquals(117,TvLibrary.episodes(activity.seriesMovies(),selected).size());
+    }finally{controller.destroy();}
+  }
+
 }
