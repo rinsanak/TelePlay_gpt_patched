@@ -1,7 +1,7 @@
 {
-  "versionCode": 65,
-  "versionName": "6.1-beta1",
-  "url": "https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_6.1-beta1.apk",
-  "sha256": "86d16339fcbd164d6a968a8faf80b0b3e87dbefca055ebb698f842b00a9e27db",
-  "notes": "Unified cinema Home without a sidebar or chat shelves. Automatic full-series discovery with episode copies grouped into versions, series next/previous and autoplay, watched marks, phone double-tap seek and volume/brightness swipes. Progress sync through your own Telegram Saved Messages. Automatic same-chat subtitles including ZIP episode matching; official MSone fallback depends on service availability. Original signing identity: update without uninstall."
+  "versionCode": 67,
+  "versionName": "6.2-beta2",
+  "url": "https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_6.2-beta2.apk",
+  "sha256": "8fd49b4abbe279ac53a534081dd9eece9902f6e68357a82976e61fddc8edf425",
+  "notes": "TMPlayer-inspired UI update: full-width Home rail, clearer generated covers, responsive series and episode pages, faster progressive series discovery, and corrected adjacent multi-episode filename grouping. Also includes the selected-feature beta work: configurable short-clip filtering, grouped movie versions/shared resume, per-show preferences, appearance controls, playback gestures, chapter/cache previews, ARM64/software decoding, subtitle ranking/ZIP retry, session/storage/history controls. Some selected features and device integrations still need device-level validation; MSone depends on service availability. Original signing identity: update without uninstall."
 }
