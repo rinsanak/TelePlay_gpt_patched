@@ -1,7 +1,7 @@
 {
-  "versionCode": 64,
-  "versionName": "6.0-beta5",
-  "url": "https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_6.0-beta5.apk",
-  "sha256": "b1a020af76c5e381e3e3e82da7399bc7217a539d488c61b8bb3396d0f420e73b",
-  "notes": "TMPlayer-style charcoal and blue Home, account-wide video/document search including archived chats, paginated chat poster grids, Continue watching and series/season/episode browsing. Phone touch and TV remote layouts with Android target 35. Uses the original V5.6 signing identity; update without uninstall. Existing subtitles retained. No Cast."
+  "versionCode": 65,
+  "versionName": "6.1-beta1",
+  "url": "https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_6.1-beta1.apk",
+  "sha256": "86d16339fcbd164d6a968a8faf80b0b3e87dbefca055ebb698f842b00a9e27db",
+  "notes": "Unified cinema Home without a sidebar or chat shelves. Automatic full-series discovery with episode copies grouped into versions, series next/previous and autoplay, watched marks, phone double-tap seek and volume/brightness swipes. Progress sync through your own Telegram Saved Messages. Automatic same-chat subtitles including ZIP episode matching; official MSone fallback depends on service availability. Original signing identity: update without uninstall."
 }
