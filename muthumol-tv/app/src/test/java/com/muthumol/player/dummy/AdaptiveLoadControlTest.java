@@ -5,7 +5,7 @@ import androidx.media3.common.*;
 import androidx.media3.exoplayer.*;
 import androidx.media3.exoplayer.analytics.PlayerId;
 public class AdaptiveLoadControlTest {
- LoadControl.Parameters p(long us,boolean retry){return new LoadControl.Parameters(PlayerId.UNSET,Timeline.EMPTY,null,0,us,1,true,retry,C.TIME_UNSET);}
+ LoadControl.Parameters p(long us,boolean retry){return new LoadControl.Parameters(PlayerId.UNSET,Timeline.EMPTY,null,0,us,1,true,retry,C.TIME_UNSET,0);}
  @Test public void diskPreloadDoesNotRequireMinutesOfCompressedRam(){
   AdaptiveLoadControl load=new AdaptiveLoadControl(new StreamStats(),24*1024*1024);
   assertTrue(load.shouldContinueLoading(p(10000000,false)));assertFalse(load.shouldContinueLoading(p(30000000,false)));

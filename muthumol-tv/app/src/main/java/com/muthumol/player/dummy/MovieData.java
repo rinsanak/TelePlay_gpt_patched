@@ -5,6 +5,7 @@ import java.io.*;
 
 final class MovieData {
   private MovieData(){}
+  static String json(java.util.List<Movie> movies){org.json.JSONArray array=new org.json.JSONArray();for(Movie m:movies)array.put(m.json());return array.toString();}
   static int clearPreferences(Context context)throws IOException {
     SharedPreferences player=context.getSharedPreferences("player",0);
     SharedPreferences.Editor edit=player.edit();int removed=0;
@@ -16,7 +17,7 @@ final class MovieData {
     return removed;
   }
   static boolean isMovieKey(String key){
-    return key.startsWith("duration:")||key.startsWith("pos:")||key.startsWith("aspect:")||key.startsWith("subdelay:")
+    return key.startsWith("logical-pos:")||key.startsWith("logical-duration:")||key.startsWith("duration:")||key.startsWith("pos:")||key.startsWith("aspect:")||key.startsWith("subdelay:")
       ||key.startsWith("externalSubtitleUri:")||key.startsWith("externalSubtitleMime:")
       ||key.startsWith("externalSubtitleOff:");
   }

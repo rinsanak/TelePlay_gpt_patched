@@ -6,7 +6,7 @@ import androidx.media3.common.audio.BaseAudioProcessor;
  * gentle presence EQ, slow volume levelling and a linked-channel soft peak limit. */
 @androidx.annotation.OptIn(markerClass=androidx.media3.common.util.UnstableApi.class)
 final class TvAudioProcessor extends BaseAudioProcessor {
- volatile int mode=1,percent=100; volatile boolean fold=true;
+ volatile int mode=1,percent=100; volatile boolean fold=true,normalize=true;
  private float[] low=new float[0],high=new float[0],frame=new float[0],mixed=new float[0];private double energy=.016,level=1,envelope,gain=1;private int outputs,inputs;private boolean floating;
  protected AudioFormat onConfigure(AudioFormat f)throws UnhandledAudioFormatException {
   if(f.channelCount<1||f.channelCount>32||(f.encoding!=C.ENCODING_PCM_16BIT&&f.encoding!=C.ENCODING_PCM_FLOAT))throw new UnhandledAudioFormatException(f);
@@ -25,7 +25,7 @@ final class TvAudioProcessor extends BaseAudioProcessor {
     else if(inputs>=6){mixed[0]+=.12f*frame[3]+.45f*frame[4];mixed[1]+=.12f*frame[3]+.45f*frame[5];for(int i=6;i<inputs;i++)mixed[i%2]+=.35f*frame[i];}
    }
    double square=0;for(float v:mixed)square+=v*v;square/=outputs;if(square>1e-6)energy+=(square-energy)*measure;
-   double wanted=Math.max(1,Math.min(3,.12/Math.sqrt(Math.max(energy,1e-9))));level+=(wanted-level)*(wanted>level?rise:fall);gain+=(target-gain)*.001;
+   double wanted=Math.max(1,Math.min(3,.12/Math.sqrt(Math.max(energy,1e-9))));if(normalize)level+=(wanted-level)*(wanted>level?rise:fall);else level=1;gain+=(target-gain)*.001;
    double peak=0;for(int i=0;i<outputs;i++){float x=mixed[i];low[i]+=loStep*(x-low[i]);high[i]+=hiStep*(x-high[i]);double voice=selected==2?.32:selected==3?.16:.20;double y=(x+voice*(high[i]-low[i])-.10*low[i])*level*gain;mixed[i]=(float)y;peak=Math.max(peak,Math.abs(y));}
    envelope+=(peak-envelope)*(peak>envelope?attack:release);double threshold=selected==3?.20:selected==2?.40:.56,ratio=selected==3?6:3;double compression=envelope>threshold?Math.pow(threshold/envelope,1-1/ratio):1;
    for(float value:mixed){double y=value*compression;/* linked compressor plus memoryless soft ceiling catches even the first peak */double a=Math.abs(y);if(a>.85)y=Math.copySign(.85+.14*Math.tanh((a-.85)/.14),y);out.putShort((short)Math.round(Math.max(-.99,Math.min(.99,y))*32767));}

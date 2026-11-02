@@ -86,7 +86,7 @@ final class Ui {
   static TextView text(Context c, String s, int size, int color) {
     TextView v = new TextView(c);
     v.setText(s);
-    v.setTextSize(size);
+    v.setTextSize(size);v.setTypeface(Appearance.font);
     v.setTextColor(color);
     v.setPadding(dp(c, 8), dp(c, 8), dp(c, 8), dp(c, 8));
     return v;

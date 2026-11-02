@@ -18,11 +18,11 @@ public class TelegramLibraryTest {
   static Object field(Object[] fields,String name){for(int i=0;i<fields.length;i+=2)if(name.equals(fields[i]))return fields[i+1];return null;}
   static TdApi.Chat chat(long id){TdApi.Chat c=new TdApi.Chat();c.id=id;c.title="Chat "+id;return c;}
   static TdApi.Message video(long chat,int id){TdApi.Message m=ChannelScanTest.movie(id,id,"Film "+id+".mkv","media"+id);m.chatId=chat;m.date=id;return m;}
-  @Test public void searchesEveryChatIncludingArchiveAndLoadsBothMediaTypes()throws Exception{
+  @Test public void searchesMainChatListExcludingArchiveAndLoadsBothMediaTypes()throws Exception{
     List<String> filters=new ArrayList<>();
     library=new TelegramLibrary(RuntimeEnvironment.getApplication(),(name,args)->{
       if(name.equals("GetChat"))return chat((long)field(args,"chatId"));
-      assertEquals("SearchMessages",name);assertNull(field(args,"chatList"));
+      assertEquals("SearchMessages",name);assertEquals("ChatListMain",TelegramBridge.type(field(args,"chatList")));
       String type=TelegramBridge.type(field(args,"filter"));filters.add(type);
       TdApi.Message m=type.equals("SearchMessagesFilterVideo")?video(-100,1):ChannelScanTest.subtitle(2,2,"Movie.mkv");m.chatId=-200;
       return new TdApi.FoundMessages(1,new TdApi.Message[]{m},"");
@@ -68,14 +68,14 @@ public class TelegramLibraryTest {
     library.browse(0,"old");library.worker.submit(()->{}).get(5,TimeUnit.SECONDS);library.browse(0,"new");drain();
     assertEquals(1,library.items().size());assertEquals("Film 2.mkv",library.items().get(0).title);
   }
-  @Test public void nonChannelChatsAndTheArchiveAreRetained()throws Exception{
+  @Test public void nonChannelMainChatsAreRetainedAndArchiveIsExcluded()throws Exception{
     List<String> lists=new ArrayList<>();
     library=new TelegramLibrary(RuntimeEnvironment.getApplication(),(name,args)->{
       if(name.equals("LoadChats")){lists.add(TelegramBridge.type(field(args,"chatList")));return new TdApi.Error(404,"All chats loaded");}
       if(name.equals("GetChats"))return new TdApi.Chats(1,new long[]{TelegramBridge.type(field(args,"chatList")).equals("ChatListMain")?1:2});
       return chat((long)field(args,"chatId"));
     });
-    library.loadChats();drain();library.loadChats();drain();assertEquals(Arrays.asList("ChatListMain","ChatListArchive"),lists);assertEquals(2,library.chats.size());assertTrue(library.mainDone&&library.archiveDone);
+    library.loadChats();drain();library.loadChats();drain();assertEquals(Collections.singletonList("ChatListMain"),lists);assertEquals(1,library.chats.size());assertTrue(library.mainDone&&library.archiveDone);
   }
   @Test public void chatGridGroupsShowsAndReturnsFromSeasonsToThatGrid()throws Exception{
     org.robolectric.android.controller.ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).create();

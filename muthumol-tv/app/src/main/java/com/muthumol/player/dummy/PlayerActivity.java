@@ -38,10 +38,10 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
   static void discardWarmPlayer(){PlayerActivity p=warm.get();if(p!=null&&!p.foreground){p.release();p.stopped=true;p.resumePosition=0;p.resumePlaying=true;p.subtitleUri=null;p.subtitleMime=null;p.appliedAutoSubtitle="";}warm.clear();}
   int uiColor=Ui.MENU_COLORS[0];
   final Handler ui = new Handler(Looper.getMainLooper());
-  TelegramLibrary episodeLibrary;PlayerGestures gestures;
+  TelegramLibrary episodeLibrary;PlayerGestures gestures;SeekPreview seekPreview;
   final ArrayList<Movie> items = new ArrayList<>();
   int index, boost = 100, fontSize = 24;
-  boolean hwPlus, showInfo;
+  boolean hwPlus, showInfo,videoSoftwareRecovery;
   final TvAudioProcessor voiceProcessor=new TvAudioProcessor();
   TvPlayerTools tvTools;
   float ratioOverride;
@@ -74,13 +74,17 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
   final Runnable retryTask = () -> recoverPlayback(false);
   boolean foreground=true, controlsVisible=true;
 
+  @Override protected void attachBaseContext(Context base) {
+    super.attachBaseContext(Appearance.wrap(base));
+  }
+
   Movie movie() {
     return items.get(index);
   }
 
   @Override
   public void onCreate(Bundle b) {
-    super.onCreate(b);BetaLog.init(this);
+    Appearance.apply(this);super.onCreate(b);BetaLog.init(this);
     Ui.full(this);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     prefs = getSharedPreferences("player", 0);
@@ -115,8 +119,9 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
     }
     if(session.movie!=null&&session.movie.cacheIdentity().equals(movie().cacheIdentity()))streamStats=session.stats;
     resumePosition = getIntent().getBooleanExtra("startFromBeginning",false)?0:movie().savedPosition(this);
+    if(resumePosition>0&&!getIntent().getBooleanExtra("startFromBeginning",false))resumePosition=Math.max(0,resumePosition-3000);
     autoSubtitleBeforeStart();
-    restoreMovieSettings();
+    SeriesPreferences.restore(this,movie());restoreMovieSettings();
     if(b != null) {
       resumePosition=b.getLong("position",resumePosition);
       resumePlaying=b.getBoolean("playing",true);
@@ -147,6 +152,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
   }
 
   void start() {
+    if(seekPreview!=null){seekPreview.close();seekPreview=null;}
     BetaLog.event("player_create","optimizedBuild="+(!BuildConfig.DEBUG)+" resumeMs="+resumePosition+" warm="+(player!=null));
     stopped = false;streamStats.paused=false;
     streamStats.setPlaybackPosition(resumePosition,Math.max(0,movie().duration)*1000L,movie().size);
@@ -204,13 +210,13 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
         new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.RIGHT);
     ip.bottomMargin = Ui.dp(this, 62);ip.rightMargin=Ui.dp(this,12);
     root.addView(info, ip);info.setVisibility(View.GONE);
-    setContentView(root);
+    root.addView(new ColourBorder(this),new FrameLayout.LayoutParams(-1,-1));setContentView(root);if(tvTools!=null)tvTools.initCards();
     DefaultRenderersFactory factory =
-        new DefaultRenderersFactory(this) {
+        new io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory(this) {
           @Override
           protected AudioSink buildAudioSink(Context context, boolean floatOutput, boolean playbackParams) {
             boostProcessor.percent=boost;
-            voiceProcessor.mode=prefs.getInt("tvAudioMode",1);voiceProcessor.percent=boost;voiceProcessor.fold=stereo;
+            voiceProcessor.normalize=prefs.getBoolean("tvNormalize",true);voiceProcessor.mode=prefs.getInt("tvAudioMode",1);voiceProcessor.percent=boost;voiceProcessor.fold=stereo;
             StereoProcessor mixer = new StereoProcessor();
             // No HDMI passthrough in Stereo mode: decoded PCM must pass through the mixer.
             BetaLog.event("audio_processor_chain","stereo="+stereo+" order="+(stereo?"channel_mix,linear_boost":"linear_boost")+" boostPercent="+boost+" boostPolicy=linear_gain_with_sample_clipping pcmAccess=bulk stereoIdentity=bypass");
@@ -218,7 +224,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
                 .setAudioCapabilities(AudioCapabilities.DEFAULT_AUDIO_CAPABILITIES)
                 .setEnableFloatOutput(false)
                 .setAudioTrackBufferSizeProvider(audioBufferProvider(Build.VERSION.SDK_INT))
-                .setAudioProcessors(prefs.getInt("tvAudioMode",1)==0?(stereo?new AudioProcessor[]{mixer,boostProcessor}:new AudioProcessor[]{boostProcessor}):new AudioProcessor[]{voiceProcessor}).build());
+                .setAudioProcessors(prefs.getInt("tvAudioMode",1)==0?(stereo?new AudioProcessor[]{mixer,boostProcessor}:new AudioProcessor[]{boostProcessor}):new AudioProcessor[]{voiceProcessor}).build(),()->prefs.getLong("audioDelayMs",0)*1000);
           }
           @Override
           public Renderer[] createRenderers(
@@ -256,7 +262,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
           }
         };
     factory
-        .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+        .setExtensionRendererMode((prefs.getBoolean("tvPreferSoftware",false)||videoSoftwareRecovery)?DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER:DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
         .setEnableDecoderFallback(true)
         .setMediaCodecSelector(
             (mime, secure, tunnel) -> {
@@ -268,7 +274,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
                   new ArrayList<>();
               for (androidx.media3.exoplayer.mediacodec.MediaCodecInfo codec : found)
                 if (codec.hardwareAccelerated) hardware.add(codec);
-              if(prefs.getBoolean("tvPreferSoftware",false)){ArrayList<androidx.media3.exoplayer.mediacodec.MediaCodecInfo> sw=new ArrayList<>();for(androidx.media3.exoplayer.mediacodec.MediaCodecInfo codec:found)if(!codec.hardwareAccelerated)sw.add(codec);return sw.isEmpty()?found:sw;}
+              if(prefs.getBoolean("tvPreferSoftware",false)||videoSoftwareRecovery){ArrayList<androidx.media3.exoplayer.mediacodec.MediaCodecInfo> sw=new ArrayList<>();for(androidx.media3.exoplayer.mediacodec.MediaCodecInfo codec:found)if(!codec.hardwareAccelerated)sw.add(codec);return sw.isEmpty()?found:sw;}
               return hardware.isEmpty()?found:hardware;
             });
     if(codecAsync)factory.forceEnableMediaCodecAsynchronousQueueing();
@@ -294,7 +300,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
             .build();
     applyLanguagePreferences();
     player.setPlaybackSpeed(prefs.getFloat("tvSpeed",1f));
-    player.setSkipSilenceEnabled(prefs.getBoolean("tvSkipSilence",false));
+    player.setSkipSilenceEnabled(false);
     player.setAudioAttributes(
         new AudioAttributes.Builder()
             .setUsage(C.USAGE_MEDIA)
@@ -363,6 +369,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
               ExoPlayer failedPlayer=player;
               ui.post(()->{if(player!=failedPlayer||!foreground)return;resumePosition=player.getCurrentPosition();resumePlaying=player.getPlayWhenReady();retryCount++;codecAsync=false;prefs.edit().putBoolean("codecAsyncFallbackV2",false).apply();BetaLog.event("codec_fallback","from=async to=sync reason=codec_error");release();start();});return;
             }
+            if(!videoSoftwareRecovery&&e instanceof ExoPlaybackException&&((ExoPlaybackException)e).rendererFormat!=null&&((ExoPlaybackException)e).rendererFormat.sampleMimeType!=null&&((ExoPlaybackException)e).rendererFormat.sampleMimeType.startsWith("video/")&&(e.errorCode==PlaybackException.ERROR_CODE_DECODING_FAILED||e.errorCode==PlaybackException.ERROR_CODE_DECODER_INIT_FAILED)){ExoPlayer failed=player;ui.post(()->{if(player!=failed)return;videoSoftwareRecovery=true;resumePosition=player.getCurrentPosition();resumePlaying=player.getPlayWhenReady();release();start();});return;}
             if (isRecoverable(e) && retryCount < PlaybackPolicy.MAX_RETRIES) {
               scheduleRetry();
               return;
@@ -468,7 +475,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
       else if(n == 2) telegramSubtitles();
       else if(n == 3) subtitleSync();
       else if(n == 4) subtitleStyle();
-      else if(n==5)subtitlePosition();else if(n==6){session.autoSubtitles.selected="";session.autoSubtitles.find(movie());Ui.message(this,"Automatic subtitles",session.subtitleStatus);}else try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("https://malayalamsubtitles.org/?s="+Uri.encode(MediaTitle.parse(movie().title).name))));}catch(Exception e){Ui.message(this,"MSone","Browser unavailable");}
+      else if(n==5)subtitlePosition();else if(n==6){session.autoSubtitles.retry(movie());Ui.message(this,"Automatic subtitles",session.subtitleStatus);}else MsoneSubtitles.choose(this);
     });
   }
 
@@ -479,7 +486,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
       View button=view.findViewById(id);
       if(button!=null)button.setOnFocusChangeListener((v,focused)->{styleTransport(v,focused);if(focused)lastControlFocus=v.getId();showFocusLabel(v,focused);armControlsHide();});
     }
-    configureRemoteNavigation();tintPlaybackControls();
+    configureRemoteNavigation();tintPlaybackControls();if(seekPreview==null)seekPreview=new SeekPreview(this);
   }
   void tintPlaybackControls() {
     View panel=view.findViewById(androidx.media3.ui.R.id.exo_bottom_bar);if(panel!=null)panel.setBackground(null);
@@ -553,7 +560,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
     player.setMediaItem(item.build());
   }
 
-  void applyBoost(int id){boostProcessor.percent=boost;voiceProcessor.percent=boost;}
+  void applyBoost(int id){boostProcessor.percent=boost;voiceProcessor.percent=boost;voiceProcessor.normalize=prefs.getBoolean("tvNormalize",true);}
 
   void styleSubtitles() {
     SubtitleView sv = view.getSubtitleView();
@@ -564,11 +571,11 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
       sv.setStyle(
           new CaptionStyleCompat(
               color,
+              prefs.getInt("subBackground",Color.TRANSPARENT),
               Color.TRANSPARENT,
-              Color.TRANSPARENT,
-              CaptionStyleCompat.EDGE_TYPE_OUTLINE,
+              prefs.getInt("subEdge",CaptionStyleCompat.EDGE_TYPE_OUTLINE),
               Color.BLACK,
-              null));
+              android.graphics.Typeface.create(prefs.getString("subTypeface","sans-serif"),prefs.getBoolean("subBold",false)?android.graphics.Typeface.BOLD:android.graphics.Typeface.NORMAL)));
     }
   }
 
@@ -709,11 +716,12 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
     Runnable update=()->{preview.setTextSize(fontSize);preview.setTextColor(prefs.getInt("subcolor",Color.WHITE));styleSubtitles();};
     LinearLayout sizes=new LinearLayout(this);Button minus=Ui.button(this,"A−",()->{fontSize=Math.max(14,fontSize-2);prefs.edit().putInt("font",fontSize).apply();update.run();});minus.setContentDescription("Smaller subtitle text");Button plus=Ui.button(this,"A+",()->{fontSize=Math.min(40,fontSize+2);prefs.edit().putInt("font",fontSize).apply();update.run();});plus.setContentDescription("Larger subtitle text");sizes.addView(minus,new LinearLayout.LayoutParams(0,-2,1));sizes.addView(plus,new LinearLayout.LayoutParams(0,-2,1));Ui.add(box,sizes);
     String[] names={"White","Yellow","Cyan"};int[] colors={Color.WHITE,Color.YELLOW,Color.CYAN};LinearLayout palette=new LinearLayout(this);for(int i=0;i<colors.length;i++){final int n=i;Button choice=Ui.button(this,names[i],()->{prefs.edit().putInt("subcolor",colors[n]).apply();update.run();});choice.setTextSize(13);choice.setPadding(4,4,4,4);palette.addView(choice,new LinearLayout.LayoutParams(0,-2,1));}Ui.add(box,palette);
-    Button embedded=Ui.button(this,"Embedded styling: "+(prefs.getBoolean("embeddedstyle",true)?"On":"Off"),()->{});embedded.setOnClickListener(v->{boolean next=!prefs.getBoolean("embeddedstyle",true);prefs.edit().putBoolean("embeddedstyle",next).apply();embedded.setText("Embedded styling: "+(next?"On":"Off"));update.run();});Ui.add(box,embedded);Ui.add(box,Ui.text(this,"Embedded styling keeps the subtitle file's own appearance.",12,Ui.MUTED));Ui.sideDialog(this,"Subtitle preview",box);minus.requestFocus();
+    Button embedded=Ui.button(this,"Embedded styling: "+(prefs.getBoolean("embeddedstyle",true)?"On":"Off"),()->{});embedded.setOnClickListener(v->{boolean next=!prefs.getBoolean("embeddedstyle",true);prefs.edit().putBoolean("embeddedstyle",next).apply();embedded.setText("Embedded styling: "+(next?"On":"Off"));update.run();});Ui.add(box,embedded);Ui.add(box,Ui.text(this,"Embedded styling keeps the subtitle file's own appearance.",12,Ui.MUTED));Ui.add(box,Ui.button(this,"Font / bold / edge / background",()->choose("Subtitle style",new String[]{"Typeface","Bold · "+prefs.getBoolean("subBold",false),"Edge / outline","Background"},n->{if(n==0)choose("Subtitle font",new String[]{"Sans serif","Serif","Monospace"},x->{prefs.edit().putString("subTypeface",new String[]{"sans-serif","serif","monospace"}[x]).apply();styleSubtitles();});else if(n==1){prefs.edit().putBoolean("subBold",!prefs.getBoolean("subBold",false)).apply();styleSubtitles();}else if(n==2)choose("Subtitle edge",new String[]{"None","Outline","Drop shadow"},x->{prefs.edit().putInt("subEdge",new int[]{CaptionStyleCompat.EDGE_TYPE_NONE,CaptionStyleCompat.EDGE_TYPE_OUTLINE,CaptionStyleCompat.EDGE_TYPE_DROP_SHADOW}[x]).apply();styleSubtitles();});else choose("Subtitle background",new String[]{"Transparent","Half black","Solid black"},x->{prefs.edit().putInt("subBackground",new int[]{Color.TRANSPARENT,0x88000000,Color.BLACK}[x]).apply();styleSubtitles();});})));Ui.sideDialog(this,"Subtitle preview",box);minus.requestFocus();
   }
 
   static String subtitleMime(String name) {
     String n = name.toLowerCase(Locale.ROOT);
+    if (n.endsWith(".ttml")) return MimeTypes.APPLICATION_TTML;
     if (n.endsWith(".srt")) return MimeTypes.APPLICATION_SUBRIP;
     if (n.endsWith(".vtt")) return MimeTypes.TEXT_VTT;
     if (n.endsWith(".ass") || n.endsWith(".ssa")) return MimeTypes.TEXT_SSA;
@@ -943,7 +951,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
         public void run() {
           if (player == null) return;
           if(tvTools!=null)tvTools.tick();
-          Format format=player.getVideoFormat(),audioFormat=player.getAudioFormat();
+          Format format=player.getVideoFormat(),audioFormat=player.getAudioFormat();if(format!=null&&foreground)FrameRateMatcher.apply(PlayerActivity.this,format.frameRate);
           long bitrate=(format!=null && format.bitrate>0 ? format.bitrate : 0)
               +(audioFormat!=null && audioFormat.bitrate>0 ? audioFormat.bitrate : 0);
           long duration=player.getDuration();
@@ -1034,7 +1042,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
     if (player == null || items.isEmpty()) return;
     long position = player.getCurrentPosition(), duration = player.getDuration();
     if (duration > 0 && duration - position < 10000) position = 0;
-    new TvLibrary(this).remember(movie());
+    SeriesPreferences.save(this,movie());VideoCopies.save(this,movie(),position,duration);new TvLibrary(this).remember(movie());
     SharedPreferences.Editor saved=prefs.edit().putLong(positionKey(),position);if(duration>0)saved.putLong("duration:"+movie().cacheIdentity(),duration);saved.apply();WatchSync.get(this).record(movie(),position,duration,duration>0&&player.getCurrentPosition()>=duration-10000?Boolean.TRUE:null);
   }
 
@@ -1059,6 +1067,7 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
   protected void onStop() {
     ui.postDelayed(()->WatchSync.get(this).sync(null,true),250);
     BetaLog.event("player_stop","warmRetained="+(player!=null&&!isFinishing()));
+    if(BackgroundAudio.owns(this)){foreground=false;if(player!=null)player.setTrackSelectionParameters(player.getTrackSelectionParameters().buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_VIDEO,true).build());FrameRateMatcher.apply(this,0);savePosition();if(view!=null)view.setPlayer(null);super.onStop();return;}
     if(Build.VERSION.SDK_INT>=26&&isInPictureInPictureMode()){super.onStop();return;}
     if(tvTools!=null)tvTools.hidden();
     foreground=false;bluetooth.stop();controlsTouchActive=false;ui.removeCallbacks(hideControls);ui.removeCallbacks(hideSeekFeedback);if(seekFeedback!=null)seekFeedback.setVisibility(View.GONE);
@@ -1084,12 +1093,12 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
   protected void onStart() {
     BetaLog.event("player_return","warm="+(player!=null)+" resumeMs="+resumePosition);
     super.onStart();
-    foreground=true;bluetooth.start();session.add(this);session.onVisible(this);changed();
+    foreground=true;BackgroundAudio.returnToScreen(this);bluetooth.start();session.add(this);session.onVisible(this);changed();
     ui.removeCallbacks(expireWarm);
     if(player!=null) {
       streamStats.paused=false;
       if(streamStats.cache!=null)streamStats.cache.setPaused(false);
-      view.setPlayer(player);player.setAudioAttributes(player.getAudioAttributes(),true);player.setPlayWhenReady(resumePlaying);
+      player.setTrackSelectionParameters(player.getTrackSelectionParameters().buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_VIDEO,false).build());view.setPlayer(player);player.setAudioAttributes(player.getAudioAttributes(),true);player.setPlayWhenReady(resumePlaying);
       bufferPulse.setVisibility(player.getPlaybackState()==Player.STATE_BUFFERING?View.VISIBLE:View.GONE);
       ui.removeCallbacks(ticker);ui.post(ticker);armControlsHide();
     } else if (stopped && !isFinishing()) start();
@@ -1112,14 +1121,14 @@ public final class PlayerActivity extends Activity implements ChannelSession.Lis
   }
   @Override public void onTrimMemory(int level) {
     super.onTrimMemory(level);
-    if(!foreground&&(level==TRIM_MEMORY_RUNNING_LOW||level==TRIM_MEMORY_RUNNING_CRITICAL||level>=TRIM_MEMORY_BACKGROUND)) {
+    if(!foreground&&!BackgroundAudio.owns(this)&&(level==TRIM_MEMORY_RUNNING_LOW||level==TRIM_MEMORY_RUNNING_CRITICAL||level>=TRIM_MEMORY_BACKGROUND)) {
       release();stopped=true;
     }
   }
 
   @Override
   protected void onDestroy() {
-    if(episodeLibrary!=null)episodeLibrary.close();
+    if(seekPreview!=null)seekPreview.close();if(episodeLibrary!=null)episodeLibrary.close();
     if(tvTools!=null)tvTools.close();
     bluetooth.stop();session.remove(this);session.onHidden(this);
     release();

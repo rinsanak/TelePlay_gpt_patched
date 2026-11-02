@@ -13,17 +13,17 @@ final class TmHome {
     LinearLayout frame=new LinearLayout(a);frame.setOrientation(LinearLayout.VERTICAL);a.homeRoot.addView(frame,new FrameLayout.LayoutParams(-1,-1));
     LinearLayout rail=new LinearLayout(a);rail.setOrientation(phone?LinearLayout.HORIZONTAL:LinearLayout.VERTICAL);rail.setGravity(Gravity.CENTER_HORIZONTAL);rail.setPadding(Ui.dp(a,8),Ui.dp(a,phone?8:16),Ui.dp(a,8),Ui.dp(a,8));rail.setBackgroundColor(TmStyle.SURFACE);
     HorizontalScrollView phoneRail=new HorizontalScrollView(a);
-    phoneRail.setHorizontalScrollBarEnabled(false);phoneRail.addView(rail);frame.addView(phoneRail,new LinearLayout.LayoutParams(-1,Ui.dp(a,58)));rail.setOrientation(LinearLayout.HORIZONTAL);
+    phoneRail.setHorizontalScrollBarEnabled(false);phoneRail.setFillViewport(true);phoneRail.addView(rail,new HorizontalScrollView.LayoutParams(-1,-1));frame.addView(phoneRail,new LinearLayout.LayoutParams(-1,Ui.dp(a,58)));rail.setOrientation(LinearLayout.HORIZONTAL);
     a.playFromStartButton=Ui.button(a,"Start over",()->a.launchPreview(true));a.continueButton=Ui.button(a,"Continue",()->a.launchPreview(false));
     a.playFromStartButton.setContentDescription("Play from start");a.continueButton.setContentDescription("Continue");
     Button home=nav(a,"⌂","Home",()->{a.browseChat=0;a.libraryQuery="";a.libraryFilter="All";a.previewMovie=null;if(a.tg.ready)a.accountLibrary.browse(0,"");a.home();});
     Button search=nav(a,"⌕","Search",a::searchLibrary),chats=nav(a,"☷","Chats",a::channels);
     Button resume=nav(a,"◷","Continue",()->a.selectHomeFilter("Continue"));
     Button favourites=nav(a,"☆","All movies",()->a.openGrid(0));
-    Button downloads=nav(a,"↓","Downloads",()->OfflineDownloads.get(a).show(a));
+
     Button settings=nav(a,"⚙","Settings",a::settingsPopup),refresh=nav(a,"↻","Refresh",a::refreshLibrary);
     search.setContentDescription("Search library");refresh.setContentDescription("Refresh latest videos");chats.setContentDescription("Browse chats");
-    a.homeActions=new Button[]{a.playFromStartButton,a.continueButton,search,chats,downloads,refresh,settings};a.continueButton.setNextFocusRightId(search.getId());a.playFromStartButton.setLayoutParams(new LinearLayout.LayoutParams(-2,Ui.dp(a,36)));
+    a.homeActions=new Button[]{a.playFromStartButton,a.continueButton,search,chats,refresh,settings};a.continueButton.setNextFocusRightId(search.getId());a.playFromStartButton.setLayoutParams(new LinearLayout.LayoutParams(-2,Ui.dp(a,36)));
     for(Button b:a.homeActions){if(b.getId()==View.NO_ID)b.setId(View.generateViewId());}
     TextView brand=Ui.text(a,"TG stream",18,TmStyle.ACCENT);brand.setTypeface(Typeface.DEFAULT_BOLD);brand.setGravity(Gravity.CENTER);rail.addView(brand,new LinearLayout.LayoutParams(Ui.dp(a,110),Ui.dp(a,48)));
     for(Button button:new Button[]{home,search,refresh,settings})rail.addView(button,new LinearLayout.LayoutParams(Ui.dp(a,80),Ui.dp(a,48)));
@@ -51,7 +51,7 @@ final class TmHome {
     a.libraryLoad=Ui.button(a,"Load more videos",()->a.accountLibrary.loadMore());a.libraryLoad.setId(View.generateViewId());a.libraryLoad.setTextSize(12);a.libraryLoad.setMinHeight(0);a.libraryLoad.setMinimumHeight(0);a.libraryDock.addView(a.libraryLoad,new LinearLayout.LayoutParams(-2,Ui.dp(a,phone?48:32)));
     a.focusHint=label(a,"",10,TmStyle.MUTED);a.focusHint.setMaxLines(1);a.libraryDock.addView(a.focusHint);a.artCredit=new TextView(a);a.artCredit.setVisibility(View.GONE);a.previewIdentity="";
     a.extraShelves=new LinearLayout(a);a.extraShelves.setOrientation(LinearLayout.VERTICAL);a.column.addView(a.extraShelves,1);a.extraShelfKey="";
-    a.setContentView(a.homeRoot);a.changed();if(a.displayedMovie()!=null)a.heroContinueButton.requestFocus();else search.requestFocus();TvMotion.enter(a.heroPanel,0);TvMotion.enter(a.libraryDock,90);a.startHomeTick();
+    a.setContentView(a.homeRoot);a.changed();FeaturedCarousel.attach(a);if(a.displayedMovie()!=null)a.heroContinueButton.requestFocus();else search.requestFocus();TvMotion.enter(a.heroPanel,0);TvMotion.enter(a.libraryDock,90);a.startHomeTick();
   }
   static Button nav(MainActivity a,String symbol,String title,Runnable action){Button b=Ui.button(a,title,action);b.setId(View.generateViewId());b.setContentDescription(title);b.setTextSize(11);b.setMinWidth(0);b.setMinimumWidth(0);b.setMinHeight(0);b.setMinimumHeight(0);b.setPadding(Ui.dp(a,5),0,Ui.dp(a,5),0);b.setBackground(TmStyle.pill(a,false,false));b.setOnFocusChangeListener((v,f)->{b.setBackground(TmStyle.pill(a,f,false));b.setTextColor(f?TmStyle.ON_ACCENT:TmStyle.MUTED);});return b;}
   static TextView label(MainActivity a,String text,int size,int color){TextView v=Ui.text(a,text,size,color);v.setPadding(0,Ui.dp(a,2),0,Ui.dp(a,2));return v;}

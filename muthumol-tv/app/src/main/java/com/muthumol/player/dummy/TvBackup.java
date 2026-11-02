@@ -2,7 +2,7 @@ package com.muthumol.player.dummy;
 import android.app.*;import android.content.*;import java.io.*;import java.util.*;import org.json.*;
 /** SAF backup excludes Telegram credentials, login databases, native downloads and API keys. */
 final class TvBackup {
- static final String[] STORES={"player","tv-library","tv-ui"};
+ static final String[] STORES={"player","tv-library","tv-ui","appearance","series-preferences","content-filter","metadata-corrections"};
  static void export(MainActivity a){try{Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("application/json").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,"Muthumol-TV-backup.json");a.startActivityForResult(i,602);}catch(Exception e){Ui.message(a,"Backup","A document provider is required.");}}
  static void restore(MainActivity a){try{a.startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("application/json").addCategory(Intent.CATEGORY_OPENABLE),603);}catch(Exception e){Ui.message(a,"Restore","A document provider is required.");}}
  static boolean allowed(String key){String k=key.toLowerCase(Locale.ROOT);return key.length()<512&&!k.contains("apikey")&&!k.contains("token")&&!k.contains("password")&&!k.contains("secret")&&!k.contains("subtitleuri")&&!k.contains("subtitlepath");}

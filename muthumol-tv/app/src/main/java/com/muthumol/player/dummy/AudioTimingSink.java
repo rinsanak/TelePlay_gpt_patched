@@ -4,9 +4,10 @@ import java.lang.reflect.*;
 /** Numeric-only first-buffer/clock diagnostics; never modifies timestamps or PCM. */
 @androidx.annotation.OptIn(markerClass=androidx.media3.common.util.UnstableApi.class)
 final class AudioTimingSink implements InvocationHandler {
-  final AudioSink sink;boolean first=true;long lastPosition=Long.MIN_VALUE,lastAt;
+  final AudioSink sink;java.util.function.LongSupplier delay=()->0;boolean first=true;long lastPosition=Long.MIN_VALUE,lastAt;
   private AudioTimingSink(AudioSink sink){this.sink=sink;}
   static AudioSink wrap(AudioSink sink){return (AudioSink)Proxy.newProxyInstance(AudioSink.class.getClassLoader(),new Class[]{AudioSink.class},new AudioTimingSink(sink));}
+  static AudioSink wrap(AudioSink sink,java.util.function.LongSupplier delay){AudioTimingSink proxy=new AudioTimingSink(sink);proxy.delay=delay;return (AudioSink)Proxy.newProxyInstance(AudioSink.class.getClassLoader(),new Class[]{AudioSink.class},proxy);}
   public Object invoke(Object proxy,Method method,Object[] args)throws Throwable{
     Object result;try{result=method.invoke(sink,args);}catch(InvocationTargetException e){throw e.getCause();}
     String name=method.getName();
@@ -16,6 +17,7 @@ final class AudioTimingSink implements InvocationHandler {
       long position=(Long)result,now=android.os.SystemClock.elapsedRealtime();
       if(position!=Long.MIN_VALUE){if(lastPosition!=Long.MIN_VALUE&&Math.abs(position-lastPosition)>Math.max(2000000L,(now-lastAt)*1000+1000000L))BetaLog.event("audio_clock_jump","fromUs="+lastPosition+" toUs="+position+" elapsedMs="+(now-lastAt));lastPosition=position;lastAt=now;}
     }
+    if(name.equals("getCurrentPositionUs")&&result instanceof Long&&(Long)result!=Long.MIN_VALUE&&(Long)result!=androidx.media3.common.C.TIME_UNSET)return Math.max(0,(Long)result+delay.getAsLong());
     return result;
   }
 }

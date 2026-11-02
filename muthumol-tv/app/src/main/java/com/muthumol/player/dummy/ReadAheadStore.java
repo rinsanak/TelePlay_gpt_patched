@@ -39,6 +39,7 @@ final class ReadAheadStore implements Closeable {
   private final byte[] readPage=new byte[START_BLOCK];
   private long pageStart=-1,readBytes,diskReadCount;
   private int pageLength;
+  synchronized int readCached(long pos,byte[] bytes,int offset,int count)throws IOException {if(pos<0||pos>=length)return -1;if(count==0)return 0;long start=blockStart(pos);File file=blocks.get(start);if(file==null||!file.isFile())return -1;try(RandomAccessFile input=new RandomAccessFile(file,"r")){long at=pos-start;if(at>=input.length())return -1;input.seek(at);return input.read(bytes,offset,(int)Math.min(count,input.length()-at));}}
   synchronized long readBytes(){return readBytes;}
   synchronized long diskReadCount(){return diskReadCount;}
   private synchronized boolean missingDemand(long loadingOffset){

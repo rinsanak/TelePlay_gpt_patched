@@ -1,0 +1,5 @@
+package com.muthumol.player.dummy;
+import java.util.*;
+final class StreamVariants {
+ static void show(PlayerActivity a){Movie selected=a.movie();a.session.tasks.execute(()->{try{Object source=a.tg.waitRequest("GetMessage","chatId",selected.chatId,"messageId",selected.messageId);Movie original=Movie.fromMessage(source,selected.chatId);List<Movie> variants=original==null?Collections.singletonList(selected):VideoCopies.available(Collections.singletonList(original),original);a.ui.post(()->{if(!a.movie().cacheIdentity().equals(selected.cacheIdentity()))return;String[] names=new String[variants.size()];for(int i=0;i<names.length;i++)names[i]=SeriesCatalog.quality(variants.get(i))+" · "+MainActivity.size(variants.get(i).size)+(variants.get(i).cacheIdentity().equals(selected.cacheIdentity())?" ✓":"");Ui.menu(a,"Telegram stream quality",names,n->a.tvTools.play(variants.get(n)));});}catch(Exception e){a.ui.post(()->Ui.message(a,"Stream quality","Telegram alternatives are unavailable for this message."));}});}
+}

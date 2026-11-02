@@ -25,7 +25,7 @@ final class TelegramDataSource extends BaseDataSource {
   static long budget(Context c) throws IOException {
     long free=new StatFs(MediaCache.root(c).getAbsolutePath()).getAvailableBytes();
     if(free<32L*1024*1024)throw new IOException("Not enough free space for video preload. Clear cache or free storage.");
-    return Math.min(PlaybackPolicy.CACHE_LIMIT,Math.max(2L*ReadAheadStore.BLOCK,(free-24L*1024*1024)/2));
+    return Math.min(c.getSharedPreferences("player",0).getBoolean("lowStorage",false)?64L*1048576:PlaybackPolicy.CACHE_LIMIT,Math.max(2L*ReadAheadStore.BLOCK,(free-24L*1024*1024)/2));
   }
   @Override public long open(DataSpec spec) throws IOException {
     transferInitializing(spec);closed=false;uri=spec.uri;

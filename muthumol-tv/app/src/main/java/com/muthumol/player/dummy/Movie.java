@@ -7,17 +7,20 @@ final class Movie {
   String title = "Video", uri = "", mime = "video/mp4";
   boolean saveAllowed=true;
   int fileId, duration, width, height;
-  String caption = "", identity="", artwork="", artworkPath="";
+  String caption = "", identity="", artwork="", artworkPath="",groupOverride="";
+  String uiTitle(android.content.Context c){return MovieDetails.override(c,this);}
   String cacheIdentity(){return identity.isEmpty()?uri:identity;}
   String legacyUri(){return fileId>0?"tg://file/"+fileId+"/"+Uri.encode(title):uri;}
-  long savedPosition(android.content.Context c){android.content.SharedPreferences prefs=c.getSharedPreferences("player",0);String key="pos:"+cacheIdentity();if(prefs.contains(key))return prefs.getLong(key,0);return prefs.getLong("pos:"+uri,prefs.getLong("pos:"+legacyUri(),0));}
+  long savedPosition(android.content.Context c){return VideoCopies.position(c,this);}
+  long ownSavedPosition(android.content.Context c){android.content.SharedPreferences prefs=c.getSharedPreferences("player",0);String key="pos:"+cacheIdentity();if(prefs.contains(key))return prefs.getLong(key,0);return prefs.getLong("pos:"+uri,prefs.getLong("pos:"+legacyUri(),0));}
+  org.json.JSONArray alternatives=new org.json.JSONArray();
   long date;
   long size, chatId, messageId;
 
   JSONObject json() {
     JSONObject j = new JSONObject();
     try {
-      j.put("saveAllowed",saveAllowed).put("title", title)
+      j.put("alternatives",alternatives).put("groupOverride",groupOverride).put("saveAllowed",saveAllowed).put("title", title)
           .put("uri", uri)
           .put("mime", mime)
           .put("file", fileId)
@@ -33,7 +36,7 @@ final class Movie {
 
   static Movie from(JSONObject j) {
     Movie m = new Movie();
-    m.saveAllowed=j.optBoolean("saveAllowed",true);
+    m.alternatives=j.optJSONArray("alternatives")==null?new org.json.JSONArray():j.optJSONArray("alternatives");m.groupOverride=j.optString("groupOverride");m.saveAllowed=j.optBoolean("saveAllowed",true);
     m.title = j.optString("title", "Video");
     m.uri = j.optString("uri");
     m.mime = j.optString("mime", "video/mp4");
@@ -90,6 +93,7 @@ final class Movie {
     String unique=TelegramBridge.str(TelegramBridge.get(file,"remote"),"uniqueId");
     m.identity=unique.isEmpty()?"telegram:"+chat+":"+m.messageId+":"+m.fileId:"telegram:"+unique;
     m.uri = "tg://file/" + m.fileId + "/" + Uri.encode(m.identity);
+    Object variants=TelegramBridge.get(content,"alternativeVideos");if(variants instanceof Object[])for(Object variant:(Object[])variants){Object altFile=TelegramBridge.get(variant,"video");int id=(int)TelegramBridge.num(altFile,"id");long bytes=TelegramBridge.num(altFile,"size");if(bytes<=0)bytes=TelegramBridge.num(altFile,"expectedSize");if(id<=0||bytes<=0)continue;Movie copy=Movie.from(m.json());copy.alternatives=new org.json.JSONArray();copy.fileId=id;copy.size=bytes;copy.width=(int)TelegramBridge.num(variant,"width");copy.height=(int)TelegramBridge.num(variant,"height");String uniqueId=TelegramBridge.str(TelegramBridge.get(altFile,"remote"),"uniqueId");copy.identity=uniqueId.isEmpty()?"telegram:"+chat+":"+m.messageId+":alternative:"+TelegramBridge.num(variant,"id"):"telegram:"+uniqueId;copy.mime="video/mp4";String altName=m.title.replaceAll("(?i)(2160|1080|720|576|480|360)p",copy.height+"p");if(altName.equals(m.title))altName=altName.replaceFirst("(?i)\\.(mkv|mp4)$","")+" "+copy.height+"p.mp4";copy.title=altName;copy.uri="tg://file/"+id+"/"+Uri.encode(copy.identity);m.alternatives.put(copy.json());}
     return m;
   }
 }

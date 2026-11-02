@@ -32,9 +32,9 @@ public class HomeRedesignTest {
     MainActivity a=c.get();Movie previous=a.session.movie;List<Movie> previousRecent=a.session.recentMovies;
     try {
       a.getSharedPreferences("tv-library",0).edit().clear().commit();
-      a.session.movie=movie("Not a favourite", "unmarked");
+      a.session.movie=movie("Not on Watch later", "unmarked");
       a.session.recentMovies=Collections.singletonList(a.session.movie); a.home();
-      a.selectHomeFilter("Favourites");
+      a.selectHomeFilter("Watch later");
       assertEquals(View.VISIBLE,a.emptyLibrary.getVisibility());
       assertTrue(a.emptyLibrary.getText().toString().contains("Hold OK"));
       assertFalse(a.heroContinueButton.isEnabled()); assertFalse(a.moreButton.isEnabled());

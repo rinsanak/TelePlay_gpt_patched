@@ -33,7 +33,7 @@ public class ChannelScanTest {
   }
   static TdApi.Message movie(long messageId,int fileId,String name,String unique){
     TdApi.File file=new TdApi.File();file.id=fileId;file.size=1234;file.remote=new TdApi.RemoteFile();file.remote.uniqueId=unique;
-    TdApi.Video video=new TdApi.Video();video.fileName=name;video.mimeType="video/x-matroska";video.video=file;
+    TdApi.Video video=new TdApi.Video();video.duration=7200;video.fileName=name;video.mimeType="video/x-matroska";video.video=file;
     TdApi.Message message=new TdApi.Message();message.id=messageId;TdApi.MessageVideo content=new TdApi.MessageVideo();content.video=video;message.content=content;return message;
   }
   static TdApi.Message subtitle(long messageId,int fileId,String name){

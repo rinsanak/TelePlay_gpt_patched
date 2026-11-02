@@ -15,7 +15,7 @@ final class TelegramLibrary {
   static final int PAGE=50;
   final Handler ui=new Handler(Looper.getMainLooper());
   final ExecutorService worker=Executors.newSingleThreadExecutor(r->{Thread t=new Thread(r,"Telegram library");t.setDaemon(true);return t;});
-  final Calls calls; final Context context;
+  final Calls calls; final Context context;final boolean resolveChatTitles;
   final LinkedHashMap<String,Movie> media=new LinkedHashMap<>();
   final LinkedHashMap<Long,String> chats=new LinkedHashMap<>();
   Listener listener;
@@ -23,8 +23,9 @@ final class TelegramLibrary {
   long chatId,videoFrom,documentFrom; int generation;
   boolean videoDone,documentDone,loading,chatLoading,mainDone,archiveDone;
   int mainLimit,archiveLimit;
-  TelegramLibrary(Context c,TelegramBridge tg){this(c,tg::waitRequest);}
-  TelegramLibrary(Context c,Calls calls){context=c.getApplicationContext();this.calls=calls;}
+  TelegramLibrary(Context c,TelegramBridge tg){this(c,tg::waitRequest,true);}
+  TelegramLibrary(Context c,Calls calls){this(c,calls,true);}
+  TelegramLibrary(Context c,Calls calls,boolean resolveChatTitles){context=c.getApplicationContext();this.calls=calls;this.resolveChatTitles=resolveChatTitles;}
   void notifyChanged(){if(listener!=null)listener.libraryChanged();}
   void browse(long chat,String text){
     generation++;chatId=chat;query=text.trim();videoOffset="";documentOffset="";
@@ -53,7 +54,7 @@ final class TelegramLibrary {
           if(!(raw instanceof TdApi.Message[]))throw new IllegalStateException("Unexpected Telegram media response");
           for(TdApi.Message message:(TdApi.Message[])raw){Movie m=Movie.fromMessage(message,message.chatId);if(m!=null&&m.fileId>0){found.add(m);titles.putIfAbsent(message.chatId,"");}}
         }
-        for(long id:new ArrayList<>(titles.keySet())){
+        if(resolveChatTitles)for(long id:new ArrayList<>(titles.keySet())){
           TdApi.Object detail=calls.call("GetChat","chatId",id);
           titles.put(id,TelegramBridge.str(detail,"title"));
           if(TelegramBridge.bool(detail,"hasProtectedContent"))for(Movie m:found)if(m.chatId==id)m.saveAllowed=false;
@@ -69,11 +70,11 @@ final class TelegramLibrary {
   }
   TdApi.Object fetch(long chat,String q,String offset,long from,String filter)throws Exception{
     Object f=TelegramBridge.obj(filter);
-    if(chat==0)return calls.call("SearchMessages","chatList",null,"query",q,"offset",offset,"limit",PAGE,"filter",f,"chatTypeFilter",null,"minDate",0,"maxDate",0);
+    if(chat==0)return calls.call("SearchMessages","chatList",TelegramBridge.obj("ChatListMain"),"query",q,"offset",offset,"limit",PAGE,"filter",f,"chatTypeFilter",null,"minDate",0,"maxDate",0);
     return calls.call("SearchChatMessages","chatId",chat,"topicId",null,"query",q,"senderId",null,"fromMessageId",from,"offset",0,"limit",PAGE,"filter",f);
   }
   void loadChats(){
-    if(chatLoading||mainDone&&archiveDone)return;chatLoading=true;notifyChanged();
+    archiveDone=true;if(chatLoading||mainDone)return;chatLoading=true;notifyChanged();
     final boolean main= !mainDone; final int limit=(main?mainLimit:archiveLimit)+100;
     worker.execute(()->{try{
       Object list=TelegramBridge.obj(main?"ChatListMain":"ChatListArchive");

@@ -259,7 +259,7 @@ public class PlayerApi25Test {
     MainActivity home=hc.get();home.openHome();home.settingsPopup();
     android.app.Dialog dialog=org.robolectric.shadows.ShadowDialog.getLatestDialog();
     assertNotNull(dialog);assertTrue(dialog.isShowing());
-    assertArrayEquals(new String[]{"Clear cache","Log start","Stop and send","Channel selection","Check for update","Artwork source"},MainActivity.HOME_SETTINGS_ACTIONS);
+    assertArrayEquals(new String[]{"Clear cache","Log start","Stop and export","Movie filters","Check for update","Artwork source"},MainActivity.HOME_SETTINGS_ACTIONS);
     hc.destroy();
   }
   @Test public void playFromStartOverridesSavedResumePosition(){

@@ -51,7 +51,7 @@ def stage(destination):
     shutil.copy2(apk, destination / name)
     manifest = dict(versionCode=code, versionName=version, url=BASE + 'apks/' + name,
                     sha256=hashlib.sha256(apk.read_bytes()).hexdigest(),
-                    notes='Unified cinema Home without a sidebar or chat shelves. Automatic full-series discovery with episode copies grouped into versions, series next/previous and autoplay, watched marks, phone double-tap seek and volume/brightness swipes. Progress sync through your own Telegram Saved Messages. Automatic same-chat subtitles including ZIP episode matching; official MSone fallback depends on service availability. Original signing identity: update without uninstall.')
+                    notes='TMPlayer-inspired UI update matching the supplied phone reference: wide series artwork, poster/title lockup, metadata and ratings, continue control, round show actions, synopsis, season/quality chips and landscape episode cards. Series backgrounds cache separately. Also includes full-width Home rail, clearer generated covers, faster progressive series discovery and corrected adjacent episode grouping. Selected-feature beta additions remain; some features and device integrations need device-level validation, and MSone depends on service availability. Original signing identity: update without uninstall.')
     (destination / 'latest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     print(f'Verified signed {version} ({code}); staged APK and manifest')
 

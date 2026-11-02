@@ -4,7 +4,7 @@ import java.util.*;import java.util.regex.*;
 final class MediaTitle {
  final String name,episodeName;final int year,season,episode;
  private MediaTitle(String n,int y,int s,int e,String title){name=n;year=y;season=s;episode=e;episodeName=title;}
- static final Pattern EP=Pattern.compile("(?i)\\b(?:s(\\d{1,2})\\s*e(\\d{1,3})|(\\d{1,2})x(\\d{1,3})|season\\s*(\\d{1,2})\\s*(?:episode|ep|e)\\s*(\\d{1,3}))\\b");
+ static final Pattern EP=Pattern.compile("(?i)\\b(?:s(\\d{1,2})\\s*e(\\d{1,3})(?:\\s*(?:-|–|,|&)??\\s*e\\d{1,3})?|(\\d{1,2})x(\\d{1,3})(?:\\s*(?:-|–|,|&)??\\s*\\d{1,3})?|season\\s*(\\d{1,2})\\s*(?:episode|ep|e)\\s*(\\d{1,3}))\\b");
  static final Pattern YEAR=Pattern.compile("\\b((?:19|20)\\d{2})\\b");
  static final Pattern TAG=Pattern.compile("(?i)\\b(?:2160p|1080p|720p|480p|4k|uhd|hq|hdrip|web[ -]?dl|webrip|bluray|brrip|dvdrip|hdtv|x26[45]|h[ .]?26[45]|hevc|avc|aac\\d*|ddp?\\+?|eac3|ac3|dts|esub|multi|dual|malayalam|tamil|telugu|hindi|kannada|english|org|proper|repack)\\b");
  static MediaTitle parse(String raw){String s=raw.replaceFirst("(?i)\\.(mkv|mp4|avi|mov|m4v|webm|ts)$","").replaceAll("\\[[^]]*]", " ").replaceAll("[._]"," ").replaceAll("\\s+"," ").trim();Matcher y=YEAR.matcher(s);int year=y.find()?Integer.parseInt(y.group(1)):0;Matcher ep=EP.matcher(s);int season=0,episode=0;String end="",name=s;
