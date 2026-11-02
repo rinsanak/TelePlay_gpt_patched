@@ -108,7 +108,7 @@ final class ChannelSession {
   synchronized void updatePosition(long ms){playbackMs=Math.max(0,ms);if(index==null||store==null)return;if(index.durationUs>0)stats.mediaBits=movie.size*8000000L/index.durationUs;long from=index.byteAt(Math.max(0,ms-120000)*1000,false),to=index.byteAt((ms+300000)*1000,true);if(from>=0&&to>=from)store.window(from,to);}
   synchronized void closeStore(){ReadAheadStore old=store;store=null;stats.cache=null;index=null;preparedIdentity="";if(old!=null)old.closePreservingCompletedBlocks();if(preparedFileId!=0){tg.streamObservers.remove(preparedFileId,stats);stats.endFile(preparedFileId);preparedFileId=0;}}
   void clear(){
-    if(clearing)return;clearing=true;pause();epoch++;
+    if(clearing)return;autoSubtitles.generation++;autoSubtitles.selected="";clearing=true;pause();epoch++;
     synchronized(refreshLock){refreshGeneration++;pendingRefresh=false;}
     movie=null;recentMovies=Collections.emptyList();recentSubtitles=Collections.emptyMap();subtitleId=0;subtitlePath="";subtitleType="";subtitleName="";playbackMs=0;
     note="Clearing all movie data…";notifyChanged();BetaLog.event("cache_clear_start","scope=all_movies");
