@@ -1,7 +1,7 @@
 {
-  "versionCode": 67,
-  "versionName": "6.2-beta2",
-  "url": "https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_6.2-beta2.apk",
-  "sha256": "8fd49b4abbe279ac53a534081dd9eece9902f6e68357a82976e61fddc8edf425",
-  "notes": "TMPlayer-inspired UI update: full-width Home rail, clearer generated covers, responsive series and episode pages, faster progressive series discovery, and corrected adjacent multi-episode filename grouping. Also includes the selected-feature beta work: configurable short-clip filtering, grouped movie versions/shared resume, per-show preferences, appearance controls, playback gestures, chapter/cache previews, ARM64/software decoding, subtitle ranking/ZIP retry, session/storage/history controls. Some selected features and device integrations still need device-level validation; MSone depends on service availability. Original signing identity: update without uninstall."
+  "versionCode": 68,
+  "versionName": "6.2-beta3",
+  "url": "https://raw.githubusercontent.com/rinsanak/TelePlay_gpt_patched/tg-stream-updates/apks/TG_stream_6.2-beta3.apk",
+  "sha256": "57e3816891f8966ffa2a08bcdcfc3088b2923fc06aa91f1213f4d6772fe486be",
+  "notes": "TMPlayer-inspired UI update matching the supplied phone reference: wide series artwork, poster/title lockup, metadata and ratings, continue control, round show actions, synopsis, season/quality chips and landscape episode cards. Series backgrounds cache separately. Also includes full-width Home rail, clearer generated covers, faster progressive series discovery and corrected adjacent episode grouping. Selected-feature beta additions remain; some features and device integrations need device-level validation, and MSone depends on service availability. Original signing identity: update without uninstall."
 }
