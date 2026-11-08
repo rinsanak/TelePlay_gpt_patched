@@ -56,6 +56,7 @@ public final class MainActivity extends Activity implements TelegramBridge.Liste
 
   public void changed(){
     if(!screen.equals("home")||session==null)return;
+    final long refreshStarted=SystemClock.elapsedRealtime();
     updateShelf();Movie m=displayedMovie();artworks.active(foreground&&tg.ready);if(foreground&&tg.ready)artworks.prefetch(libraryMovies(),m);String identity=m==null?"":m.cacheIdentity();if(!identity.equals(previewIdentity)){boolean animate=!previewIdentity.isEmpty()&&heroPanel!=null&&heroPanel.isAttachedToWindow();previewIdentity=identity;if(animate){heroPanel.animate().cancel();heroPanel.setAlpha(.8f);heroPanel.animate().alpha(1).setDuration(160).start();}}
     if(title!=null)title.setText(m==null?(libraryFilter.equals("All")&&libraryQuery.isEmpty()?"Your cinema awaits":libraryQuery.isEmpty()?libraryFilter:"No matches"):MediaTitle.parse(m.title).name);
     if(playFromStartButton!=null)playFromStartButton.setEnabled(m!=null);
@@ -76,6 +77,7 @@ public final class MainActivity extends Activity implements TelegramBridge.Liste
       status.setVisibility(m==null||failed?View.VISIBLE:View.GONE);
       stateAction.setVisibility(m==null||failed?View.VISIBLE:View.GONE);stateAction.setText(movieCards.isEmpty()&&(!libraryFilter.equals("All")||!libraryQuery.isEmpty())?"Show all":session.channelId==0?"Choose channel":failed?"Retry":"Refresh");ArtworkStore.Entry art=artworks.cached(m);if(artCredit!=null)artCredit.setText(art==null?"": "Artwork: "+art.source+" · "+art.kind);
     }
+    BetaLog.event("home_refresh","durationMs="+(SystemClock.elapsedRealtime()-refreshStarted)+" movieCards="+movieCards.size());
   }
 
   void styleFilter(Button chip,String filter){boolean selected=libraryFilter.equals(filter)&&libraryQuery.isEmpty();chip.setSelected(selected);chip.setTextColor(chip.hasFocus()?TmStyle.ON_ACCENT:selected?TmStyle.ACCENT:TmStyle.MUTED);chip.setBackground(TmStyle.pill(this,chip.hasFocus(),selected));}
