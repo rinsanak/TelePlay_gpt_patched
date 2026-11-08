@@ -15,13 +15,15 @@ import org.drinkless.tdlib.TdApi;
 /** Opt-in playback diagnostics. Allowlisted numeric events, never raw TDLib/logcat dumps. */
 @androidx.annotation.OptIn(markerClass=androidx.media3.common.util.UnstableApi.class)
 final class BetaLog {
-  static final int MAX_BYTES=1024*1024,QUEUE_LIMIT=256;
+  static final int MAX_BYTES=2*1024*1024,QUEUE_LIMIT=512;
   static final AtomicLong hits=new AtomicLong(),misses=new AtomicLong(),waitMs=new AtomicLong(),readBytes=new AtomicLong();
   static final AtomicLong underruns=new AtomicLong(),droppedVideoFrames=new AtomicLong(),playerErrors=new AtomicLong(),pointerEvents=new AtomicLong(),boostClippedSamples=new AtomicLong();
   static volatile boolean collecting,finishing;
   static volatile long lastCpuPercent=-1;
   static volatile String failure="";
   static Context context;static File logFile;static long began,lastCpuAt,lastCpuMs;
+  static final Handler sampleHandler=new Handler(Looper.getMainLooper());
+  static final Runnable sampleTask=new Runnable(){public void run(){if(active()){device();sampleHandler.postDelayed(this,5000);}}};
   static ArrayBlockingQueue<String> errors;
   static final AtomicInteger errorCount=new AtomicInteger();
   static ArrayBlockingQueue<String> queue;static Thread writer;
@@ -53,7 +55,7 @@ final class BetaLog {
     event("build","versionCode="+BuildConfig.VERSION_CODE+" media3=1.4.1 loggingSchema=3 videoEffects=disabled");
     android.content.SharedPreferences settings=c.getSharedPreferences("player",0);
     event("saved_settings","stereo="+settings.getBoolean("stereo",true)+" boost="+settings.getInt("boost",100)+" asyncCodec="+settings.getBoolean("codecAsyncFallbackV2",Build.VERSION.SDK_INT<=25));
-    device();audioCapabilities();
+    device();audioCapabilities();sampleHandler.removeCallbacks(sampleTask);sampleHandler.postDelayed(sampleTask,5000);
     ChannelSession session=ChannelSession.get(c);StreamStats stats=session.stats;event("initial_cache","movieBytes="+(session.movie==null?0:session.movie.size)+" savedPositionMs="+(session.movie==null?0:session.movie.savedPosition(c))+" indexReady="+(session.index!=null&&session.index.durationUs>0)+" diskBytes="+stats.cachedBytes()+" aheadBytes="+stats.aheadBytes()+" requests="+stats.downloadRequests+" paused="+stats.paused+" cacheFailed="+(session.store!=null&&session.store.failed()));
     TelegramBridge tg=TelegramBridge.getInstance(c);event("telegram_state","ready="+tg.ready+" connection="+tg.connectionState);
     if(c instanceof PlayerActivity)((PlayerActivity)c).diagnosticSnapshot();
@@ -116,9 +118,9 @@ final class BetaLog {
     event("device","processCpuPercent="+cpuPercent+" heapUsed="+(r.totalMemory()-r.freeMemory())+" nativeHeap="+Debug.getNativeHeapAllocatedSize()+" heapTotal="+r.totalMemory()+" systemAvailable="+mi.availMem+" lowMemory="+mi.lowMemory+" memoryClass="+(am==null?0:am.getMemoryClass())+" diskFree="+new StatFs(context.getFilesDir().getAbsolutePath()).getAvailableBytes()+wifi+outputs+" network="+(cap==null?"none":cap.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)?"wifi":cap.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)?"cellular":"other"));
   }
   static void stop(Activity a,boolean send){
-    init(a);synchronized(BetaLog.class){if(finishing){Toast.makeText(a,"Log is being saved",Toast.LENGTH_SHORT).show();return;}event("beta_stop","user requested");collecting=false;finishing=true;}
+    init(a);synchronized(BetaLog.class){if(finishing){Toast.makeText(a,"Log is being saved",Toast.LENGTH_SHORT).show();return;}event("beta_stop","user requested");collecting=false;sampleHandler.removeCallbacks(sampleTask);finishing=true;}
     Thread t=new Thread(()->{
-      try{Thread w=writer;if(w!=null)w.join(3000);if(w!=null&&w.isAlive()){failure="Log is still saving; try Stop again";}}catch(InterruptedException e){Thread.currentThread().interrupt();}
+      try{Thread w=writer;if(w!=null)w.join();}catch(InterruptedException e){Thread.currentThread().interrupt();failure="Log save was interrupted";}
       File upload=null;
       if(send&&logFile.isFile()&&failure.isEmpty())try{File folder=new File(context.getCacheDir(),"beta-exports");folder.mkdirs();File[] old=folder.listFiles();if(old!=null)for(File f:old)if(System.currentTimeMillis()-f.lastModified()>24L*60*60*1000)f.delete();upload=new File(folder,"beta-stream-"+began+".txt");try(InputStream in=new FileInputStream(logFile);OutputStream out=new FileOutputStream(upload)){byte[] b=new byte[8192];int n;while((n=in.read(b))>0)out.write(b,0,n);}}catch(IOException e){failure="Log saved; could not prepare Telegram copy";}
       final File sendFile=upload;finishing=false;
