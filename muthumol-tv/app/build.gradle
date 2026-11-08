@@ -6,7 +6,7 @@ if (!(tgId ==~ /[0-9]{1,10}/) || Long.parseLong(tgId)>Integer.MAX_VALUE || !(tgH
 android {
  namespace 'com.muthumol.player.dummy'
  compileSdk 35
- defaultConfig { buildConfigField "int", "TG_API_ID", tgId; buildConfigField "String", "TG_API_HASH", "\"${tgHash}\""; applicationId 'com.muthumol.player.dummy'; minSdk 25; targetSdk 35; versionCode 65; versionName '6.1-beta1'; buildConfigField "boolean", "BETA_DIAGNOSTICS", "true"; ndk { abiFilters 'armeabi-v7a' } }
+ defaultConfig { buildConfigField "int", "TG_API_ID", tgId; buildConfigField "String", "TG_API_HASH", "\"${tgHash}\""; applicationId 'com.muthumol.player.dummy'; minSdk 25; targetSdk 35; versionCode 66; versionName '6.1-beta2'; buildConfigField "boolean", "BETA_DIAGNOSTICS", "true"; ndk { abiFilters 'armeabi-v7a' } }
  buildTypes { debug { minifyEnabled false }; release { debuggable false; minifyEnabled true; shrinkResources true; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' } }
  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
  packaging { jniLibs { useLegacyPackaging true } }
