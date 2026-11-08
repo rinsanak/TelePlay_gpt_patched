@@ -22,7 +22,7 @@ final class BetaLog {
   static volatile long lastCpuPercent=-1;
   static volatile String failure="";
   static Context context;static File logFile;static long began,lastCpuAt,lastCpuMs;
-  static final Handler sampleHandler=new Handler(Looper.getMainLooper());
+  static Handler sampleHandler;
   static final Runnable sampleTask=new Runnable(){public void run(){if(active()){device();sampleHandler.postDelayed(this,5000);}}};
   static ArrayBlockingQueue<String> errors;
   static final AtomicInteger errorCount=new AtomicInteger();
@@ -55,7 +55,7 @@ final class BetaLog {
     event("build","versionCode="+BuildConfig.VERSION_CODE+" media3=1.4.1 loggingSchema=3 videoEffects=disabled");
     android.content.SharedPreferences settings=c.getSharedPreferences("player",0);
     event("saved_settings","stereo="+settings.getBoolean("stereo",true)+" boost="+settings.getInt("boost",100)+" asyncCodec="+settings.getBoolean("codecAsyncFallbackV2",Build.VERSION.SDK_INT<=25));
-    device();audioCapabilities();sampleHandler.removeCallbacks(sampleTask);sampleHandler.postDelayed(sampleTask,5000);
+    device();audioCapabilities();if(sampleHandler==null)sampleHandler=new Handler(Looper.getMainLooper());sampleHandler.removeCallbacks(sampleTask);sampleHandler.postDelayed(sampleTask,5000);
     ChannelSession session=ChannelSession.get(c);StreamStats stats=session.stats;event("initial_cache","movieBytes="+(session.movie==null?0:session.movie.size)+" savedPositionMs="+(session.movie==null?0:session.movie.savedPosition(c))+" indexReady="+(session.index!=null&&session.index.durationUs>0)+" diskBytes="+stats.cachedBytes()+" aheadBytes="+stats.aheadBytes()+" requests="+stats.downloadRequests+" paused="+stats.paused+" cacheFailed="+(session.store!=null&&session.store.failed()));
     TelegramBridge tg=TelegramBridge.getInstance(c);event("telegram_state","ready="+tg.ready+" connection="+tg.connectionState);
     if(c instanceof PlayerActivity)((PlayerActivity)c).diagnosticSnapshot();
@@ -118,7 +118,7 @@ final class BetaLog {
     event("device","processCpuPercent="+cpuPercent+" heapUsed="+(r.totalMemory()-r.freeMemory())+" nativeHeap="+Debug.getNativeHeapAllocatedSize()+" heapTotal="+r.totalMemory()+" systemAvailable="+mi.availMem+" lowMemory="+mi.lowMemory+" memoryClass="+(am==null?0:am.getMemoryClass())+" diskFree="+new StatFs(context.getFilesDir().getAbsolutePath()).getAvailableBytes()+wifi+outputs+" network="+(cap==null?"none":cap.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)?"wifi":cap.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)?"cellular":"other"));
   }
   static void stop(Activity a,boolean send){
-    init(a);synchronized(BetaLog.class){if(finishing){Toast.makeText(a,"Log is being saved",Toast.LENGTH_SHORT).show();return;}event("beta_stop","user requested");collecting=false;sampleHandler.removeCallbacks(sampleTask);finishing=true;}
+    init(a);synchronized(BetaLog.class){if(finishing){Toast.makeText(a,"Log is being saved",Toast.LENGTH_SHORT).show();return;}event("beta_stop","user requested");collecting=false;if(sampleHandler!=null)sampleHandler.removeCallbacks(sampleTask);finishing=true;}
     Thread t=new Thread(()->{
       try{Thread w=writer;if(w!=null)w.join();}catch(InterruptedException e){Thread.currentThread().interrupt();failure="Log save was interrupted";}
       File upload=null;
