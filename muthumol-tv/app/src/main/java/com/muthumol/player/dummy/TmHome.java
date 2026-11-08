@@ -7,6 +7,7 @@ import android.widget.*;
 /** Native TV and touch layout using TMPlayer's rail, hero and poster shelves. */
 final class TmHome {
   static void build(MainActivity a){
+    final long buildStarted=android.os.SystemClock.elapsedRealtime();
     boolean phone=a.phoneLayout(),compact=!phone&&a.getResources().getDisplayMetrics().heightPixels/a.getResources().getDisplayMetrics().density<500;
     a.screen="home";a.uiColor=TmStyle.ACCENT;
     a.homeRoot=new FrameLayout(a);a.homeRoot.setBackgroundColor(TmStyle.BACKGROUND);
@@ -51,7 +52,7 @@ final class TmHome {
     a.libraryLoad=Ui.button(a,"Load more videos",()->a.accountLibrary.loadMore());a.libraryLoad.setId(View.generateViewId());a.libraryLoad.setTextSize(12);a.libraryLoad.setMinHeight(0);a.libraryLoad.setMinimumHeight(0);a.libraryDock.addView(a.libraryLoad,new LinearLayout.LayoutParams(-2,Ui.dp(a,phone?48:32)));
     a.focusHint=label(a,"",10,TmStyle.MUTED);a.focusHint.setMaxLines(1);a.libraryDock.addView(a.focusHint);a.artCredit=new TextView(a);a.artCredit.setVisibility(View.GONE);a.previewIdentity="";
     a.extraShelves=new LinearLayout(a);a.extraShelves.setOrientation(LinearLayout.VERTICAL);a.column.addView(a.extraShelves,1);a.extraShelfKey="";
-    a.setContentView(a.homeRoot);a.changed();if(a.displayedMovie()!=null)a.heroContinueButton.requestFocus();else search.requestFocus();TvMotion.enter(a.heroPanel,0);TvMotion.enter(a.libraryDock,90);a.startHomeTick();
+    a.setContentView(a.homeRoot);a.changed();if(a.displayedMovie()!=null)a.heroContinueButton.requestFocus();else search.requestFocus();TvMotion.enter(a.heroPanel,0);TvMotion.enter(a.libraryDock,90);BetaLog.event("home_build","durationMs="+(android.os.SystemClock.elapsedRealtime()-buildStarted)+" movieCards="+a.movieCards.size()+" phone="+phone+" compact="+compact);
   }
   static Button nav(MainActivity a,String symbol,String title,Runnable action){Button b=Ui.button(a,title,action);b.setId(View.generateViewId());b.setContentDescription(title);b.setTextSize(11);b.setMinWidth(0);b.setMinimumWidth(0);b.setMinHeight(0);b.setMinimumHeight(0);b.setPadding(Ui.dp(a,5),0,Ui.dp(a,5),0);b.setBackground(TmStyle.pill(a,false,false));b.setOnFocusChangeListener((v,f)->{b.setBackground(TmStyle.pill(a,f,false));b.setTextColor(f?TmStyle.ON_ACCENT:TmStyle.MUTED);});return b;}
   static TextView label(MainActivity a,String text,int size,int color){TextView v=Ui.text(a,text,size,color);v.setPadding(0,Ui.dp(a,2),0,Ui.dp(a,2));return v;}
