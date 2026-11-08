@@ -22,16 +22,13 @@ public final class MainActivity extends Activity implements TelegramBridge.Liste
   int uiColor;LinearLayout column;TextView status,title,subtitles;Button playFromStartButton,continueButton;
   PosterArtView poster;TextView resumeSummary,movieState,focusHint;ProgressBar resumeProgress;Button heroContinueButton,stateAction;
   FrameLayout homeRoot;LinearLayout heroPanel,libraryDock;String previewIdentity="";Movie previewMovie;LinearLayout movieRail;TextView shelfTitle;String shelfKey=null;final List<MovieCardView> movieCards=new ArrayList<>();
-  final Handler homeUi=new Handler(Looper.getMainLooper());
-  final Runnable homeTick=new Runnable(){public void run(){if(foreground&&"home".equals(screen)){changed();homeUi.postDelayed(this,3000);}}};
-  void startHomeTick(){homeUi.removeCallbacks(homeTick);if(foreground&&"home".equals(screen))homeUi.postDelayed(homeTick,3000);}
   TelegramBridge tg;ChannelSession session;String screen="home";boolean foreground;
 
   public void onCreate(Bundle state){super.onCreate(state);tvLibrary=new TvLibrary(this);updater=new AppUpdater(this);artworks=ArtworkStore.get(this);BetaLog.init(this);Ui.full(this);openHome();}
   void openHome(){if(isFinishing())return;tg=TelegramBridge.getInstance(this);session=ChannelSession.get(this);session.add(this);tg.listener=this;if(accountLibrary==null){accountLibrary=new TelegramLibrary(this,tg);accountLibrary.listener=this;}home();session.onVisible(this);startLibrary();}
-  protected void onResume(){super.onResume();if(updater!=null)updater.onResume();foreground=true;WatchSync.get(this).refresh();OfflineDownloads.get(this).visibility(true);artworks.add(this);if(session!=null){session.add(this);session.onVisible(this);tg.listener=this;if("home".equals(screen))refreshHomeColors();changed();startHomeTick();}}
-  protected void onStop(){OfflineDownloads.get(this).visibility(false);homeUi.removeCallbacks(homeTick);foreground=false;artworks.active(false);artworks.remove(this);if(session!=null){session.remove(this);session.onHidden(this);}super.onStop();}
-  protected void onDestroy(){if(seriesLibrary!=null)seriesLibrary.close();if(accountLibrary!=null)accountLibrary.close();homeUi.removeCallbacks(homeTick);if(artworks!=null)artworks.remove(this);if(updater!=null)updater.close();if(session!=null){session.remove(this);session.onHidden(this);}if(tg!=null&&tg.listener==this)tg.listener=null;super.onDestroy();}
+  protected void onResume(){super.onResume();if(updater!=null)updater.onResume();foreground=true;WatchSync.get(this).refresh();OfflineDownloads.get(this).visibility(true);artworks.add(this);if(session!=null){session.add(this);session.onVisible(this);tg.listener=this;if("home".equals(screen))refreshHomeColors();changed();}}
+  protected void onStop(){OfflineDownloads.get(this).visibility(false);foreground=false;artworks.active(false);artworks.remove(this);if(session!=null){session.remove(this);session.onHidden(this);}super.onStop();}
+  protected void onDestroy(){if(seriesLibrary!=null)seriesLibrary.close();if(accountLibrary!=null)accountLibrary.close();if(artworks!=null)artworks.remove(this);if(updater!=null)updater.close();if(session!=null){session.remove(this);session.onHidden(this);}if(tg!=null&&tg.listener==this)tg.listener=null;super.onDestroy();}
 
   void page(String name){
     if(artworks!=null)artworks.active(false);
